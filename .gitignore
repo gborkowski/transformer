@@ -28,3 +28,4 @@ buildNumber.properties
 .vscode/
 
 .DS_Store
+properties/
