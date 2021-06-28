@@ -138,8 +138,15 @@ public class ImportParseDelimited {
                 fm.setTargetDataType("String");
                 fm.setTargetEntity("product");
 
-                // change this to loop through headers-fms to see if theres a match on sourcetarget
-                if (ihi.getHeaders().indexOf(tmp) == -1) {
+                // see if it already exists
+                boolean exists = false;
+                for (FieldMap existing : ihi.getHeaders()) {
+                    String existingSourceLabel = existing.getSourceLabel();
+                    if (existingSourceLabel.equals(tmp)) {
+                        exists = true;
+                    }
+                }
+                if (!exists) {
                     arr.add(tmp);
                     ihi.addToHeaders(fm);
                 }
@@ -151,9 +158,18 @@ public class ImportParseDelimited {
                 String tmp = "column" + x;
                 fm.setSourceLabel(tmp);
                 fm.setTargetLabel(tmp);
+                fm.setTargetDataType("String");
+                fm.setTargetEntity("product");
 
-                // change this to loop through headers-fms to see if theres a match on sourcetarget
-                if (ihi.getHeaders().indexOf(tmp) == -1) {
+                // see if it already exists
+                boolean exists = false;
+                for (FieldMap existing : ihi.getHeaders()) {
+                    String existingSourceLabel = existing.getSourceLabel();
+                    if (existingSourceLabel.equals(tmp)) {
+                        exists = true;
+                    }
+                }
+                if (!exists) {
                     arr.add(tmp);
                     ihi.addToHeaders(fm);
                 }
