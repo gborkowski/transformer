@@ -1,10 +1,13 @@
 package com.br.transform;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
@@ -142,13 +145,13 @@ public class Processors {
         JsonObject dataObj,
         Attributes attribute,
         String targetEntity) {
-        String delimiterEntity = "";
+        String secondDelimiter = "";
         String delimiterNameValue = "";
 
         /* getting config values */
         for (ProcessorConfigItem item : args) {
-            if ("delimiterEntity".equals(item.getName())) {
-                delimiterEntity = item.getValue();
+            if ("secondDelimiter".equals(item.getName())) {
+                secondDelimiter = item.getValue();
             }
             if ("delimiterNameValue".equals(item.getName())) {
                 delimiterNameValue = item.getValue();
@@ -156,7 +159,7 @@ public class Processors {
         }
 
         LOG.debug("MultiAttribute: in: " + in);
-        String[] entities = in.split(delimiterEntity);
+        String[] entities = in.split(secondDelimiter);
         int sizeOfEntityArr = entities.length;
 
         for (int x = 0; x < sizeOfEntityArr; x++) {
@@ -182,7 +185,209 @@ public class Processors {
 
     /***********************************************/
 
+    public String categoryPaths(
+        ArrayList<ProcessorConfigItem> args,
+        String in,
+        JsonObject dataObj,
+        Attributes attribute,
+        String targetEntity) {
+        String firstDelimiter = "";
+        String secondDelimiter = "";
+        String thirdDelimiter = "";
+        String pattern = "";
+
+        /* getting config values */
+        for (ProcessorConfigItem item : args) {
+            String itemName = item.getName();
+            switch (itemName) {
+                case "firstDelimiter":
+                    firstDelimiter = item.getValue();
+                    break;
+                case "secondDelimiter":
+                    secondDelimiter = item.getValue();
+                    break;
+                case "thirdDelimiter":
+                    thirdDelimiter = item.getValue();
+                    break;
+                case "pattern":
+                    pattern = item.getValue();
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        /* decide which pattern to use */
+        List<JsonArray> fullCategoryList = new ArrayList<JsonArray>();
+        if ("pattern1".equals(pattern)) {
+            fullCategoryList = categoryPathsPattern1(args, in, dataObj, attribute, targetEntity, firstDelimiter, secondDelimiter, thirdDelimiter);
+        } else if ("pattern2".equals(pattern)) {
+            fullCategoryList = categoryPathsPattern2(args, in, dataObj, attribute, targetEntity, firstDelimiter, secondDelimiter, thirdDelimiter);
+        } else {
+            LOG.error("categoryPaths: Unsupported pattern: " + pattern);
+        }
+
+        // add this as an attribute
+        JsonArray fullCategoryPathsJA = new Gson().toJsonTree(fullCategoryList).getAsJsonArray();
+        attribute.addCategoryPathsToJson(dataObj, fullCategoryPathsJA, targetEntity);
+
+        return in;
+    }
+
+    /***********************************************/
+
+    public List<JsonArray> categoryPathsPattern1(
+        ArrayList<ProcessorConfigItem> args,
+        String in,
+        JsonObject dataObj,
+        Attributes attribute,
+        String targetEntity,
+        String firstDelimiter,
+        String secondDelimiter,
+        String thirdDelimiter) {
+
+        /*
+        * Assumes input that looks like: “Mens:101>Clothes:102>Shirts:201,Mens:101>Clothes:102>Summer:301”
+        */
+
+        // Loop for each category
+        LOG.debug("categoryPathsPattern1: in: " + in);
+        List<JsonArray> fullCategoryList = new ArrayList<JsonArray>();
+        String[] categories = in.split(firstDelimiter);
+        int sizeOfCategoryArr = categories.length;
+
+        for (int catIndex = 0; catIndex < sizeOfCategoryArr; catIndex++) {
+            LOG.debug("categoryPathsPattern1: categories[" + catIndex + "]" + categories[catIndex]);
+
+            // Loop for each entity within each category
+            List<CategoryItem> categoryList = new ArrayList<CategoryItem>();
+            String[] entities = categories[catIndex].split(secondDelimiter);
+            int sizeOfEntityArr = entities.length;
+
+            // parse string to construct and array of CategoryItems
+            for (int entityIndex = 0; entityIndex < sizeOfEntityArr; entityIndex++) {
+                LOG.debug("categoryPathsPattern1: entities[" + entityIndex + "]" + entities[entityIndex]);
+
+                String[] pairs = entities[entityIndex].split(thirdDelimiter);
+                if (pairs.length == 2) {
+                    String name = pairs[0];
+                    String id = pairs[1];
+                    CategoryItem ci = new CategoryItem();
+                    ci.setName(name);
+                    ci.setId(id);
+                    LOG.debug("categoryPathsPattern1: name: " + name + ", value: " + id);
+
+                    // add this ci to the list
+                    categoryList.add(ci);
+
+                } else {
+                    LOG.debug("categoryPathsPattern1: didn't parse into usable name / value pairs." + pairs);
+                }
+            }
+
+            // convert list to jsonarray
+            JsonArray categoryPathsJA = new Gson().toJsonTree(categoryList).getAsJsonArray();
+            fullCategoryList.add(categoryPathsJA);
+        }
+
+        return fullCategoryList;
+    }
+
+    /***********************************************/
+
+    public List<JsonArray> categoryPathsPattern2(
+        ArrayList<ProcessorConfigItem> args,
+        String in,
+        JsonObject dataObj,
+        Attributes attribute,
+        String targetEntity,
+        String firstDelimiter,
+        String secondDelimiter,
+        String thirdDelimiter) {
+
+        /*
+        * Assumes input that looks like: “Mens>Clothes>Shirts,Mens>Clothes>Summer:101>102>201,101>102>301”
+        * basically crumbs:crumbs_id (names <firstDelimiter> ID's)
+        * firstDelimiter=:
+        * secondDelimiter=,
+        * thirdDelimiter=>
+        */
+
+        // Split with firstDelimiter to separate names and ID's
+        List<JsonArray> fullCategoryList = new ArrayList<JsonArray>();
+        LOG.debug("categoryPathsPattern2: in: " + in);
+        String[] namesAndIds = in.split(firstDelimiter);
+        String names = namesAndIds[0];
+        String ids = namesAndIds[1];
+
+        // split names and ids into arrays
+        String[] nameArray = names.split(secondDelimiter);
+        String[] idArray = ids.split(secondDelimiter);
+
+        // test they're the same length
+        int sizeOfNameArr = nameArray.length;
+        int sizeOfIdArr = idArray.length;
+
+        if (sizeOfNameArr != sizeOfIdArr) {
+            LOG.error("categoryPathsPattern2: name and id array lengths do not match.  Must be the same for pattern2");
+        } else {
+
+            // 2 dimensional arraylist
+            ArrayList<ArrayList<CategoryItem>> graph = new ArrayList<>(sizeOfNameArr);
+
+            // part one of populating the graph (add lists of category items - names only)
+            for (int nameIndex = 0; nameIndex < sizeOfNameArr; nameIndex++) {
+                LOG.debug("categoryPathsPattern2: nameArray[" + nameIndex + "]" + nameArray[nameIndex]);
+                String[] nameItemArray = nameArray[nameIndex].split(thirdDelimiter);
+                int sizeOfNameItemArr = nameItemArray.length;
+
+                ArrayList<CategoryItem> nameItems = new ArrayList<>(sizeOfNameItemArr);
+                for (int nameItemIndex = 0; nameItemIndex < nameItemArray.length; nameItemIndex++) {
+                    CategoryItem ci = new CategoryItem();
+                    ci.setName(nameItemArray[nameItemIndex]);
+                    nameItems.add(ci);
+                }
+                graph.add(nameItems);
+            }
+
+            // part two, set the id for appropriate category items
+            for (int idIndex = 0; idIndex < sizeOfNameArr; idIndex++) {
+                LOG.debug("categoryPathsPattern2: idArray[" + idIndex + "]" + idArray[idIndex]);
+                String[] idItemArray = idArray[idIndex].split(thirdDelimiter);
+                int sizeOfIdItemArr = idItemArray.length;
+
+                // these exist from previous loop
+                ArrayList<CategoryItem> nameItems = graph.get(idIndex);
+                for (int idItemIndex = 0; idItemIndex < sizeOfIdItemArr; idItemIndex++) {
+                    // updating id for every name
+                    nameItems.get(idItemIndex).setId(idItemArray[idItemIndex]);
+                }
+            }
+
+            // loop to build up json
+            for (ArrayList<CategoryItem> item : graph) {
+                // convert list to jsonarray
+                JsonArray categoryPathsJA = new Gson().toJsonTree(item).getAsJsonArray();
+                fullCategoryList.add(categoryPathsJA);
+            }
+        }
+
+        return fullCategoryList;
+    }
+
+    /***********************************************/
+
     public String specialCharacters(ArrayList<ProcessorConfigItem> args, String in) {
+        String customerName = "";
+
+        for (ProcessorConfigItem item : args) {
+            if ("customerName".equals(item.getName())) {
+                customerName = item.getValue();
+            }
+        }
+
+        LOG.info("specialCharacters: customerName: " + customerName);
+
         /*
             Things to consider:
                 - quotes (single and double) - escape them
@@ -199,10 +404,10 @@ public class Processors {
         String to = "";
 
         for (ProcessorConfigItem item : args) {
-            if (item.getName().equals("from")) {
+            if ("from".equals(item.getName())) {
                 from = item.getValue();
             }
-            if (item.getName().equals("to")) {
+            if ("to".equals(item.getName())) {
                 to = item.getValue();
             }
         }
@@ -215,7 +420,7 @@ public class Processors {
         String prependValue = "";
 
         for (ProcessorConfigItem item : args) {
-            if (item.getName().equals("prependValue")) {
+            if ("prependValue".equals(item.getName())) {
                 prependValue = item.getValue();
             }
         }
@@ -275,20 +480,25 @@ public class Processors {
         String salesPriceName = "";
 
         for (ValueGeneratorConfigItem item : args) {
-            if ("priceName".equals(item.getName())) {
-                priceName = item.getValue();
-            }
-            if ("salePriceName".equals(item.getName())) {
-                salesPriceName = item.getValue();
-            }
-            if ("min".equals(item.getName())) {
-                min = Double.parseDouble(item.getValue());
-            }
-            if ("max".equals(item.getName())) {
-                max = Double.parseDouble(item.getValue());
-            }
-            if ("percentOnSale".equals(item.getName())) {
-                percentOnSale = Double.parseDouble(item.getValue());
+            String itemName = item.getName();
+            switch (itemName) {
+                case "priceName":
+                    priceName = item.getValue();
+                    break;
+                case "salePriceName":
+                    salesPriceName = item.getValue();
+                    break;
+                case "min":
+                    min = Double.parseDouble(item.getValue());
+                    break;
+                case "max":
+                    max = Double.parseDouble(item.getValue());
+                    break;
+                case "percentOnSale":
+                    percentOnSale = Double.parseDouble(item.getValue());
+                    break;
+                default:
+                    LOG.error("priceGenerator: invalid item name");
             }
         }
 

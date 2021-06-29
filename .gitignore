@@ -29,3 +29,5 @@ buildNumber.properties
 
 .DS_Store
 properties/
+run.sh
+log4j2.xml

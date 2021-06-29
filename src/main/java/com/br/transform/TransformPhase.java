@@ -605,6 +605,7 @@ public class TransformPhase {
                 /* run String rules */
                 String fixed = processStringRules(fm, fieldData.getAsString(), procs, product);
 
+                /* had to do this to allow for non-string attributes */
                 /* if this is configured with multi, the attributes have already been added */
                 if (!hasMultiAttributeProcessor(fm)) {
                     /* add attribute */
@@ -618,6 +619,7 @@ public class TransformPhase {
                 /* run String rules */
                 String fixed = processStringRules(fm, fieldData.getAsString(), procs, variant);
 
+                /* had to do this to allow for non-string attributes */
                 /* if this is configured with multi, the attributes have already been added */
                 if (!hasMultiAttributeProcessor(fm)) {
                     /* add attribute */
@@ -745,6 +747,12 @@ public class TransformPhase {
         while (fieldProcessorIter.hasNext()) {
             ProcessorConfig processorConfig = fieldProcessorIter.next();
 
+            if ("CategoryPaths".equals(processorConfig.getName())) {
+                LOG.debug("CategoryPaths before: " + fixed);
+                fixed = procs.categoryPaths(processorConfig.getValues(),
+                    fixed, dataObj, getAttributes(), targetEntity);
+                LOG.debug("CategoryPaths after: " + fixed);
+            }
             if ("MultiAttribute".equals(processorConfig.getName())) {
                 LOG.debug("MultiAttribute before: " + fixed);
                 fixed = procs.multiAttribute(processorConfig.getValues(),

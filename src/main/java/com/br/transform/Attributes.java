@@ -7,13 +7,14 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 /**
  * Attributes.
- * Manages attributes
+ * Manages attributes - keeping track of counts for analysis purposes
  *
  */
 
@@ -100,7 +101,7 @@ public class Attributes {
         JsonElement newAttribute = gson.toJsonTree(ai, AttributeItem.class);
         JsonElement newAttributeList = gson.toJsonTree(attrList, ArrayList.class);
 
-        // test if dataObj has proeprty called 'attributes'
+        // test if dataObj has property called 'attributes'
         if (dataObj.has("attributes")) {
             LOG.debug("Attributes exist, adding new attribute");
             JsonArray existing = dataObj.getAsJsonArray("attributes");
@@ -118,5 +119,38 @@ public class Attributes {
             addToVariantAttributeList(attributeName);
             addToVariantAttributeValueList(attributeName + ":" + attributeValue);
         }
+    }
+
+    /***********************************************/
+
+    public void addCategoryPathsToJson(JsonObject dataObj, JsonArray categoryPaths, String targetEntity) {
+
+        LOG.debug("addCategoryPathsToJson: " + categoryPaths);
+
+        if (!"product".equals(targetEntity)) {
+            LOG.error("addCategoryPathsToJson: Unsupported targetEntity: " + targetEntity);
+        } else {
+            // create category_paths as a JsonArray attribute (make sure it doesn't exist)
+            // this method should only be called once / product
+
+            /* create as new JsonElement */
+            List<JsonElement> attrList = new ArrayList<JsonElement>();
+            attrList.add(categoryPaths);
+
+            Gson gson = new GsonBuilder().create();
+            JsonElement newAttribute = gson.toJsonTree(categoryPaths);
+            JsonElement newAttributeList = gson.toJsonTree(attrList, ArrayList.class);
+
+            // test if dataObj has property called 'attributes'
+            if (dataObj.has("attributes")) {
+                LOG.debug("addCategoryPathsToJson: Attributes exist, adding category_paths to it");
+                JsonArray existing = dataObj.getAsJsonArray("attributes");
+                existing.add(newAttribute);
+            } else {
+                LOG.debug("addCategoryPathsToJson: Creating attributes - did not exist before");
+                dataObj.add("attributes", newAttributeList.getAsJsonArray());
+            }
+        }
+
     }
 }
