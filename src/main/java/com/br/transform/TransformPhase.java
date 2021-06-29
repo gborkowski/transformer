@@ -673,6 +673,11 @@ public class TransformPhase {
                         fixed = processStringRules(fm, preRules, procs, variant);
                     }
 
+                    /* use default value? */
+                    if (fixed == null || "".equals(fixed)) {
+                        fixed = fm.getDefaultValue();
+                    }
+
                     /* add field to json */
                     if ("product".equals(targetEntity)) {
                         product.addProperty(targetLabel, fixed);
@@ -683,6 +688,11 @@ public class TransformPhase {
                     LOG.debug("Processing as double datatype: " + preRules);
                     double dblValue = Double.parseDouble(preRules);
 
+                    /* use default value? */
+                    if (dblValue == 0) {
+                        dblValue = Double.parseDouble(fm.getDefaultValue());
+                    }
+
                     /* add field to json */
                     if ("product".equals(targetEntity)) {
                         product.addProperty(targetLabel, dblValue);
@@ -692,6 +702,11 @@ public class TransformPhase {
                 } else if ("Long".equals(fm.getTargetDataType())) {
                     LOG.debug("Processing as double datatype: " + preRules);
                     long longValue = Long.parseLong(preRules);
+
+                    /* use default value? */
+                    if (longValue == 0) {
+                        longValue = Long.parseLong(fm.getDefaultValue());
+                    }
 
                     /* add field to json */
                     if ("product".equals(targetEntity)) {

@@ -143,11 +143,15 @@ public class Processors {
         Attributes attribute,
         String targetEntity) {
         String delimiterEntity = "";
+        String delimiterNameValue = "";
 
         /* getting config values */
         for (ProcessorConfigItem item : args) {
             if ("delimiterEntity".equals(item.getName())) {
                 delimiterEntity = item.getValue();
+            }
+            if ("delimiterNameValue".equals(item.getName())) {
+                delimiterNameValue = item.getValue();
             }
         }
 
@@ -158,7 +162,7 @@ public class Processors {
         for (int x = 0; x < sizeOfEntityArr; x++) {
             LOG.debug("MultiAttribute: entities[" + x + "]" + entities[x]);
 
-            String[] pairs = in.split(entities[x]);
+            String[] pairs = entities[x].split(delimiterNameValue);
             if (pairs.length == 2) {
                 String name = pairs[0];
                 String value = pairs[1];
