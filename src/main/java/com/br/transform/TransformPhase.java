@@ -19,7 +19,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -99,72 +98,64 @@ public class TransformPhase {
             System.exit(0);
         }
 
-        // this is the main output file (used for indexing)
         long startTotal = System.currentTimeMillis();
 
         TransformPhase transformPhase = new TransformPhase();
 
-        try {
-            /* Getting properties */
-            String rootPath = Thread.currentThread().getContextClassLoader().getResource("").getPath() + "properties/";
-            String appConfigPath = rootPath + args[0] + "/" + "transform.properties";
-            Properties appProps = new Properties();
-            appProps.load(new FileInputStream(appConfigPath));
+        /* Getting properties */
+        TransformerPropertiesManager tpm = new TransformerPropertiesManager();
+        tpm.setCustomerName(args[0]);
 
-            /* Individual properties */
-            String cMainCustomerDirectory = appProps.getProperty("mainCustomerDirectory");
-            String cTransformOutputDirectory = appProps.getProperty("transformOutputDirectory");
-            String cCustomerName = appProps.getProperty("customerName");
-            String cHasVariants = appProps.getProperty("hasVariants");
-            boolean hasVariants = Boolean.parseBoolean(cHasVariants);
-            String cHasProductAttributes = appProps.getProperty("hasProductAttributes");
-            String cHasVariantAttributes = appProps.getProperty("hasVariantAttributes");
-            String cOutputFormat = appProps.getProperty("outputFormat");
-            String cInputFile = appProps.getProperty("importOutputFile");
-            String cRowMapFile = appProps.getProperty("rowMapFile");
-            String cFieldMapFile = appProps.getProperty("fieldMapFile");
-            String cOutputProductFile = appProps.getProperty("transformOutputProductFile");
-            String cOutputVariantFile = appProps.getProperty("transformOutputVariantFile");
+        /* Individual properties */
+        String cMainCustomerDirectory = tpm.getTransformerProperties().getMainCustomerDirectory();
+        String cTransformOutputDirectory = tpm.getTransformerProperties().getTransformOutputDirectory();
+        String cCustomerName = tpm.getTransformerProperties().getCustomerName();
+        Boolean cHasVariants = tpm.getTransformerProperties().getHasVariants();
+        Boolean cHasProductAttributes = tpm.getTransformerProperties().getHasProductAttributes();
+        Boolean cHasVariantAttributes = tpm.getTransformerProperties().getHasVariantAttributes();
+        String cOutputFormat = tpm.getTransformerProperties().getOutputFormat();
+        String cInputFile = tpm.getTransformerProperties().getImportOutputFile();
+        String cRowMapFile = tpm.getTransformerProperties().getRowMapFile();
+        String cFieldMapFile = tpm.getTransformerProperties().getFieldMapFile();
+        String cOutputProductFile = tpm.getTransformerProperties().getTransformOutputProductFile();
+        String cOutputVariantFile = tpm.getTransformerProperties().getTransformOutputVariantFile();
 
-            /* gloabl settings */
-            transformPhase.setConfiguredProductAttributes(Boolean.parseBoolean(cHasProductAttributes));
-            transformPhase.setConfiguredVariantAttributes(Boolean.parseBoolean(cHasVariantAttributes));
+        /* gloabl settings */
+        transformPhase.setConfiguredProductAttributes(cHasProductAttributes);
+        transformPhase.setConfiguredVariantAttributes(cHasVariantAttributes);
 
-            /* setup file variables */
-            cInputFile = cMainCustomerDirectory + cTransformOutputDirectory + cInputFile;
-            cOutputProductFile = cMainCustomerDirectory + cTransformOutputDirectory + cOutputProductFile;
-            cOutputVariantFile = cMainCustomerDirectory + cTransformOutputDirectory + cOutputVariantFile;
-            cFieldMapFile = cMainCustomerDirectory + cTransformOutputDirectory + cFieldMapFile;
-            cRowMapFile = cMainCustomerDirectory + cTransformOutputDirectory + cRowMapFile;
+        /* setup file variables */
+        cInputFile = cMainCustomerDirectory + cTransformOutputDirectory + cInputFile;
+        cOutputProductFile = cMainCustomerDirectory + cTransformOutputDirectory + cOutputProductFile;
+        cOutputVariantFile = cMainCustomerDirectory + cTransformOutputDirectory + cOutputVariantFile;
+        cFieldMapFile = cMainCustomerDirectory + cTransformOutputDirectory + cFieldMapFile;
+        cRowMapFile = cMainCustomerDirectory + cTransformOutputDirectory + cRowMapFile;
 
-            /* load rowMap config */
-            transformPhase.loadRowMapConfig(cRowMapFile);
+        /* load rowMap config */
+        transformPhase.loadRowMapConfig(cRowMapFile);
 
-            /* load fieldMap config */
-            transformPhase.loadFieldMapConfig(cFieldMapFile);
+        /* load fieldMap config */
+        transformPhase.loadFieldMapConfig(cFieldMapFile);
 
-            /* validate fieldMap attribute config */
-            boolean configValid = transformPhase.validateFieldMapAttributeConfig(hasVariants);
-            if (!configValid) {
-                LOG.error("Config validation failed, exiting.");
-                System.exit(0);
-            }
-
-            /* validate fieldMap config for some stuff */
-            System.out.println();
-            boolean valid = transformPhase.validateFieldMapConfig(cOutputFormat, hasVariants);
-            System.out.println();
-            if (valid) {
-                /* process rows */
-                transformPhase.processJson(cCustomerName, cInputFile, cOutputProductFile,
-                    cOutputVariantFile, hasVariants);
-            }
-
-            /* perform analysis on products / variants --> output file */
-            transformPhase.performAnalysis(hasVariants);
-        } catch (IOException e) {
-            LOG.error("main: " + e);
+        /* validate fieldMap attribute config */
+        boolean configValid = transformPhase.validateFieldMapAttributeConfig(cHasVariants.booleanValue());
+        if (!configValid) {
+            LOG.error("Config validation failed, exiting.");
+            System.exit(0);
         }
+
+        /* validate fieldMap config for some stuff */
+        System.out.println();
+        boolean valid = transformPhase.validateFieldMapConfig(cOutputFormat, cHasVariants.booleanValue());
+        System.out.println();
+        if (valid) {
+            /* process rows */
+            transformPhase.processJson(cCustomerName, cInputFile, cOutputProductFile,
+                cOutputVariantFile, cHasVariants.booleanValue());
+        }
+
+        /* perform analysis on products / variants --> output file */
+        transformPhase.performAnalysis(cHasVariants.booleanValue());
 
         LOG.info("Total Time Taken : " + (System.currentTimeMillis() - startTotal) / 1000 + " secs");
     }
@@ -180,8 +171,7 @@ public class TransformPhase {
             Boolean isAttribute = item.getIsAttribute();
             Boolean ignoreThisField = item.getIgnoreThisField();
 
-            if (!ignoreThisField.booleanValue() && !hasVariants
-                && "variant".equals(targetEntity)) {
+            if (!ignoreThisField.booleanValue() && !hasVariants && "variant".equals(targetEntity)) {
                 LOG.error("validateFieldMapAttributeConfig: hasVariants is false, but this is marked as variant targetEntity: " + targetLabel);
                 return false;
             }
@@ -248,41 +238,45 @@ public class TransformPhase {
         // add others as required
 
         for (FieldMap item : fm) {
-            if ("pid".equalsIgnoreCase(item.getTargetLabel())) {
-                hasPid = true;
-            }
-            if ("title".equalsIgnoreCase(item.getTargetLabel())) {
-                hasTitle = true;
-            }
-            if ("description".equalsIgnoreCase(item.getTargetLabel())) {
-                hasDescription = true;
-            }
-            if ("url".equalsIgnoreCase(item.getTargetLabel())) {
-                hasUrl = true;
-            }
-            if ("availability".equalsIgnoreCase(item.getTargetLabel())) {
-                hasAvailability = true;
-            }
-            if ("crumbs".equalsIgnoreCase(item.getTargetLabel())) {
-                hasCrumbs = true;
-            }
-            if ("crumbs_id".equalsIgnoreCase(item.getTargetLabel())) {
-                hasCrumbs_id = true;
-            }
-            if ("price".equalsIgnoreCase(item.getTargetLabel())) {
-                hasPrice = true;
-            }
-            if ("thumb_image".equalsIgnoreCase(item.getTargetLabel())) {
-                hasThumb_image = true;
-            }
-            if ("category_paths".equalsIgnoreCase(item.getTargetLabel())) {
-                hasCategory_paths = true;
-            }
-            if ("brand".equalsIgnoreCase(item.getTargetLabel())) {
-                hasBrand = true;
-            }
-            if ("variant".equalsIgnoreCase(item.getTargetEntity())) {
-                containsVariants = true;
+            String targetLabel = item.getTargetLabel();
+            switch (targetLabel.toUpperCase()) {
+                case "PID":
+                    hasPid = true;
+                    break;
+                case "TITLE":
+                    hasTitle = true;
+                    break;
+                case "DESCRIPTION":
+                    hasDescription = true;
+                    break;
+                case "URL":
+                    hasUrl = true;
+                    break;
+                case "AVAILABILITY":
+                    hasAvailability = true;
+                    break;
+                case "CRUMBS":
+                    hasCrumbs = true;
+                    break;
+                case "CRUMBS_ID":
+                    hasCrumbs_id = true;
+                    break;
+                case "PRICE":
+                    hasPrice = true;
+                    break;
+                case "THUMB_IMAGE":
+                    hasThumb_image = true;
+                    break;
+                case "CATEGORY_PATHS":
+                    hasCategory_paths = true;
+                    break;
+                case "BRAND":
+                    hasBrand = true;
+                    break;
+                case "VARIANT":
+                    containsVariants = true;
+                    break;
+                default:
             }
         }
 
@@ -746,43 +740,45 @@ public class TransformPhase {
 
         while (fieldProcessorIter.hasNext()) {
             ProcessorConfig processorConfig = fieldProcessorIter.next();
+            String procName = processorConfig.getName();
 
-            if ("CategoryPaths".equals(processorConfig.getName())) {
-                LOG.debug("CategoryPaths before: " + fixed);
-                fixed = procs.categoryPaths(processorConfig.getValues(),
-                    fixed, dataObj, getAttributes(), targetEntity);
-                LOG.debug("CategoryPaths after: " + fixed);
-            }
-            if ("MultiAttribute".equals(processorConfig.getName())) {
-                LOG.debug("MultiAttribute before: " + fixed);
-                fixed = procs.multiAttribute(processorConfig.getValues(),
-                    fixed, dataObj, getAttributes(), targetEntity);
-                LOG.debug("MultiAttribute after: " + fixed);
-            }
-            if ("SpecialCharacters".equals(processorConfig.getName())) {
-                LOG.debug("SpecialCharacters before: " + fixed);
-                fixed = procs.specialCharacters(processorConfig.getValues(), fixed);
-                LOG.debug("SpecialCharacters after: " + fixed);
-            }
-            if ("StringReplace".equals(processorConfig.getName())) {
-                LOG.debug("StringReplace before: " + fixed);
-                fixed = procs.stringReplace(processorConfig.getValues(), fixed);
-                LOG.debug("StringReplace after: " + fixed);
-            }
-            if ("PrependString".equals(processorConfig.getName())) {
-                LOG.debug("PrependString before: " + fixed);
-                fixed = procs.prependString(processorConfig.getValues(), fixed);
-                LOG.debug("PrependString after: " + fixed);
-            }
-            if ("MakeAlphaNumeric".equals(processorConfig.getName())) {
-                LOG.debug("MakeAlphaNumeric before: " + fixed);
-                fixed = procs.makeAlphaNumeric(fixed);
-                LOG.debug("MakeAlphaNumeric after: " + fixed);
-            }
-            if ("ToUpperCase".equals(processorConfig.getName())) {
-                LOG.debug("ToUpperCase before: " + fixed);
-                fixed = procs.toUpperCase(fixed);
-                LOG.debug("ToUpperCase after: " + fixed);
+            switch (procName) {
+                case "CategoryPaths":
+                    LOG.debug("CategoryPaths before: " + fixed);
+                    fixed = procs.categoryPaths(processorConfig.getValues(), fixed, dataObj, getAttributes(), targetEntity);
+                    LOG.debug("CategoryPaths after: " + fixed);
+                    break;
+                case "MultiAttribute":
+                    LOG.debug("MultiAttribute before: " + fixed);
+                    fixed = procs.multiAttribute(processorConfig.getValues(), fixed, dataObj, getAttributes(), targetEntity);
+                    LOG.debug("MultiAttribute after: " + fixed);
+                    break;
+                case "SpecialCharacters":
+                    LOG.debug("SpecialCharacters before: " + fixed);
+                    fixed = procs.specialCharacters(processorConfig.getValues(), fixed);
+                    LOG.debug("SpecialCharacters after: " + fixed);
+                    break;
+                case "StringReplace":
+                    LOG.debug("StringReplace before: " + fixed);
+                    fixed = procs.stringReplace(processorConfig.getValues(), fixed);
+                    LOG.debug("StringReplace after: " + fixed);
+                    break;
+                case "PrependString":
+                    LOG.debug("PrependString before: " + fixed);
+                    fixed = procs.prependString(processorConfig.getValues(), fixed);
+                    LOG.debug("PrependString after: " + fixed);
+                    break;
+                case "MakeAlphaNumeric":
+                    LOG.debug("MakeAlphaNumeric before: " + fixed);
+                    fixed = procs.makeAlphaNumeric(fixed);
+                    LOG.debug("MakeAlphaNumeric after: " + fixed);
+                    break;
+                case "ToUpperCase":
+                    LOG.debug("ToUpperCase before: " + fixed);
+                    fixed = procs.toUpperCase(fixed);
+                    LOG.debug("ToUpperCase after: " + fixed);
+                    break;
+                default:
             }
         }
 

@@ -3,7 +3,6 @@ package com.br.transform;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
@@ -13,7 +12,6 @@ import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
-import java.util.Properties;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -47,90 +45,85 @@ public class ImportPhase {
 
         ImportPhase importPhase = new ImportPhase();
 
-        try {
-            /* Getting properties file */
-            String rootPath = Thread.currentThread().getContextClassLoader().getResource("").getPath() + "properties/";
-            String appConfigPath = rootPath + args[0] + "/" + "transform.properties";
-            Properties appProps = new Properties();
-            appProps.load(new FileInputStream(appConfigPath));
+        /* Getting properties file */
+        TransformerPropertiesManager tpm = new TransformerPropertiesManager();
+        tpm.setCustomerName(args[0]);
 
-            /* Individual properties */
-            String cMainCustomerDirectory = appProps.getProperty("mainCustomerDirectory");
-            String cInputFile = appProps.getProperty("importInputFile");
-            String cFileType = appProps.getProperty("fileType");
-            String cTransformOutputDirectory = appProps.getProperty("transformOutputDirectory");
-            String cOutputFile = appProps.getProperty("importOutputFile");
-            String cFieldMapFile = appProps.getProperty("fieldMapFile");
-            String cRowMapFile = appProps.getProperty("rowMapFile");
-            String cCharacterSet = appProps.getProperty("characterSet");
+        /* Individual properties */
+        String cMainCustomerDirectory = tpm.getTransformerProperties().getMainCustomerDirectory();
+        String cTransformOutputDirectory = tpm.getTransformerProperties().getTransformOutputDirectory();
 
-            /* Delimited properties */
-            String cFieldSeparator = appProps.getProperty("fieldSeparator");
-            String cHeaderRowExists = appProps.getProperty("headerRowExists");
-            boolean headerRowExists = Boolean.parseBoolean(cHeaderRowExists);
+        String cInputFile = tpm.getTransformerProperties().getImportInputFile();
+        String cFileType = tpm.getTransformerProperties().getFileType();
+        String cOutputFile = tpm.getTransformerProperties().getImportOutputFile();
+        String cRowMapFile = tpm.getTransformerProperties().getRowMapFile();
+        String cFieldMapFile = tpm.getTransformerProperties().getFieldMapFile();
+        String cCharacterSet = tpm.getTransformerProperties().getCharacterSet();
 
-            /* XML properties */
-            String cMainXMLEntity = appProps.getProperty("mainXMLEntity");
-            String cProductXMLEntity = appProps.getProperty("productXMLEntity");
-            String cVariantXMLEntity = appProps.getProperty("variantXMLEntity");
-            String cHasVariants = appProps.getProperty("hasVariants");
-            boolean hasVariants = Boolean.parseBoolean(cHasVariants);
-            String cPreserveValuesForSourceEntities = appProps.getProperty("preserveValuesForSourceEntities");
+        /* Delimited properties */
+        String cFieldSeparator = tpm.getTransformerProperties().getFieldSeparator();
 
-            /* Check that files & directories are there */
-            importPhase.createTransformOutputDirectoryIfMissing(cMainCustomerDirectory + cTransformOutputDirectory);
+        Boolean cHeaderRowExists = tpm.getTransformerProperties().getHeaderRowExists();
+        boolean headerRowExists = cHeaderRowExists.booleanValue();
 
-            /* setup file variables */
-            cInputFile = cMainCustomerDirectory + cInputFile;
-            cOutputFile = cMainCustomerDirectory + cTransformOutputDirectory + cOutputFile;
-            cFieldMapFile = cMainCustomerDirectory + cTransformOutputDirectory + cFieldMapFile;
-            cRowMapFile = cMainCustomerDirectory + cTransformOutputDirectory + cRowMapFile;
+        /* XML properties */
+        String cMainXMLEntity = tpm.getTransformerProperties().getMainXMLEntity();
+        String cProductXMLEntity = tpm.getTransformerProperties().getProductXMLEntity();
+        String cVariantXMLEntity = tpm.getTransformerProperties().getVariantXMLEntity();
+        Boolean cHasVariants = tpm.getTransformerProperties().getHasVariants();
+        String cPreserveValuesForSourceEntities = tpm.getTransformerProperties().getPreserveValuesForSourceEntities();
 
-            /* Check fieldMap file */
-            boolean okToWrite = importPhase.checkFieldMapFile(cFieldMapFile);
-            if (!okToWrite) {
-                System.out.println();
-                LOG.info("FieldMap file has been changed - don't want to overwrite any of your changes.");
-                LOG.info("You need to either remove or rename the configured fieldMap file: ");
-                System.out.println(cFieldMapFile);
-                System.out.println();
-                System.exit(0);
-            }
+        /* Check that files & directories are there */
+        importPhase.createTransformOutputDirectoryIfMissing(cMainCustomerDirectory + cTransformOutputDirectory);
 
-            // Process based on file type
-            if ("delimited".equals(cFileType)) {
-                ImportParseDelimited ipd = new ImportParseDelimited();
-                ipd.processDelimited(
-                    cFileType,
-                    cInputFile,
-                    cFieldSeparator,
-                    headerRowExists,
-                    cOutputFile,
-                    cCharacterSet,
-                    importPhase.ihi);
-            } else if ("XML".equals(cFileType)) {
-                // handle XML
-                ImportParseXML ipx = new ImportParseXML();
-                ipx.processXML(cFileType,
-                    cInputFile,
-                    cOutputFile,
-                    cCharacterSet,
-                    cMainXMLEntity,
-                    cProductXMLEntity,
-                    cVariantXMLEntity,
-                    hasVariants,
-                    cPreserveValuesForSourceEntities,
-                    importPhase.ihi);
-            } else if ("JSON".equals(cFileType)) {
-                ImportParseJson ipj = new ImportParseJson();
-                ipj.processJson(cFileType, cInputFile, cOutputFile, cCharacterSet, importPhase.ihi);
-            }
+        /* setup file variables */
+        cInputFile = cMainCustomerDirectory + cInputFile;
+        cOutputFile = cMainCustomerDirectory + cTransformOutputDirectory + cOutputFile;
+        cFieldMapFile = cMainCustomerDirectory + cTransformOutputDirectory + cFieldMapFile;
+        cRowMapFile = cMainCustomerDirectory + cTransformOutputDirectory + cRowMapFile;
 
-            // write out fieldMap and rowMap config JSON files
-            importPhase.writeMapFiles(cFieldMapFile, cRowMapFile);
-        } catch (IOException e) {
-            LOG.error("ImportPhase(main): " + e);
+        /* Check fieldMap file */
+        boolean okToWrite = importPhase.checkFieldMapFile(cFieldMapFile);
+        if (!okToWrite) {
+            System.out.println();
+            LOG.info("FieldMap file has been changed - don't want to overwrite any of your changes.");
+            LOG.info("You need to either remove or rename the configured fieldMap file: ");
+            System.out.println(cFieldMapFile);
+            System.out.println();
+            System.exit(0);
         }
+
+        // Process based on file type
+        if ("delimited".equals(cFileType)) {
+            ImportParseDelimited ipd = new ImportParseDelimited();
+            ipd.processDelimited(
+                cFileType,
+                cInputFile,
+                cFieldSeparator,
+                headerRowExists,
+                cOutputFile,
+                cCharacterSet,
+                importPhase.ihi);
+        } else if ("XML".equals(cFileType)) {
+            // handle XML
+            ImportParseXML ipx = new ImportParseXML();
+            ipx.processXML(cFileType,
+                cInputFile,
+                cOutputFile,
+                cCharacterSet,
+                cMainXMLEntity,
+                cProductXMLEntity,
+                cVariantXMLEntity,
+                cHasVariants.booleanValue(),
+                cPreserveValuesForSourceEntities,
+                importPhase.ihi);
+        } else if ("JSON".equals(cFileType)) {
+            ImportParseJson ipj = new ImportParseJson();
+            ipj.processJson(cFileType, cInputFile, cOutputFile, cCharacterSet, importPhase.ihi);
+        }
+
+        // write out fieldMap and rowMap config JSON files
+        importPhase.writeMapFiles(cFieldMapFile, cRowMapFile);
 
         LOG.info("Total Time Taken : " + (System.currentTimeMillis() - startTotal) / 1000 + " secs");
     }
