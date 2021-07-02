@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -25,16 +26,20 @@ import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
+import org.apache.commons.collections4.MultiValuedMap;
+import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
 public class OutputConnect {
     private static final Logger LOG = LogManager.getLogger(OutputConnect.class);
 
-    /* variant list - loaded into memory */
-    private List<JsonObject> variantList = new ArrayList<JsonObject>();
+    /* variant map - loaded into memory */
+    private MultiValuedMap<String, JsonObject> variantMap = new ArrayListValuedHashMap<>();
 
     /***********************************************/
 
@@ -77,7 +82,8 @@ public class OutputConnect {
 
             while (jsonReader.hasNext()) {
                 JsonObject jsonObj = gson.fromJson(jsonReader, JsonObject.class);
-                variantList.add(jsonObj);
+                String variantPid = jsonObj.get("pid").getAsString();
+                variantMap.put(variantPid, jsonObj);
 
                 // status
                 numberOfRecords++;
@@ -140,7 +146,7 @@ public class OutputConnect {
 
                 // handle adding variants
                 if (hasVariants) {
-                    LOG.info("Add variants here");
+                    LOG.debug("Add variants here");
                     handleVariants(doc, prod, jsonObj);
                 }
 
@@ -149,7 +155,7 @@ public class OutputConnect {
 
                 // status
                 numberOfRecords++;
-                if (numberOfRecords % 1000 == 0) {
+                if (numberOfRecords % 500 == 0) {
                     LOG.info("records: " + numberOfRecords);
                 } else {
                     LOG.debug("records: " + numberOfRecords);
@@ -182,18 +188,12 @@ public class OutputConnect {
 
     public void handleVariants(Document doc, Element prod, JsonObject jsonObj) {
         // see if there are any matching by pid
-        JsonElement pid = jsonObj.get("pid");
+        String pid = jsonObj.get("pid").getAsString();
         LOG.debug("Getting variants for pid: " + pid);
 
         // temp holder for matches
-        List<JsonObject> matching = new ArrayList<JsonObject>();
-
-        for (JsonObject variant: variantList) {
-            JsonElement variantPid = variant.get("pid");
-            if (pid.equals(variantPid)) {
-                matching.add(variant);
-            }
-        }
+        Collection<JsonObject> srcCollection = variantMap.get(pid);
+        List<JsonObject> matching = new ArrayList<JsonObject>(srcCollection);
 
         // if yes, create <variants>
         if (matching.size() > 0) {
@@ -256,12 +256,16 @@ public class OutputConnect {
             AttributeItem ai = gson.fromJson(je, AttributeItem.class);
             LOG.debug("handleArray: AttributeItem: " + ai.getName() + ", " + ai.getValue());
 
-            // write each element of array
-            Element attr = doc.createElement(ai.getName());
-            attr.appendChild(doc.createTextNode(ai.getValue()));
+            try {
+                // write each element of array
+                Element attr = doc.createElement(StringEscapeUtils.escapeXml11(ai.getName()));
+                attr.appendChild(doc.createTextNode(StringEscapeUtils.escapeXml11(ai.getValue())));
 
-            // add to elem
-            elem.appendChild(attr);
+                // add to elem
+                elem.appendChild(attr);
+            } catch (DOMException de) {
+                LOG.debug("Problem with adding XML attribute: " + de);
+            }
         }
     }
 
@@ -276,6 +280,6 @@ public class OutputConnect {
     public void handlePrimitive(Document doc, Element elem, JsonPrimitive jp, String key) {
 
         LOG.debug("handlePrimitive: " + key + ", " + jp.getAsString());
-        elem.appendChild(doc.createTextNode(jp.getAsString()));
+        elem.appendChild(doc.createTextNode(StringEscapeUtils.escapeXml11(jp.getAsString())));
     }
 }

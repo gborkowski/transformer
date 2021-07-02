@@ -17,17 +17,20 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import org.apache.commons.collections4.MultiValuedMap;
+import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 public class OutputDataConnect {
     private static final Logger LOG = LogManager.getLogger(OutputDataConnect.class);
 
-    /* variant list - loaded into memory */
-    private List<JsonObject> variantList = new ArrayList<JsonObject>();
+    /* variant map - loaded into memory */
+    private MultiValuedMap<String, JsonObject> variantMap = new ArrayListValuedHashMap<>();
 
     /***********************************************/
 
@@ -92,7 +95,7 @@ public class OutputDataConnect {
 
                 // status
                 numberOfRecords++;
-                if (numberOfRecords % 1000 == 0) {
+                if (numberOfRecords % 500 == 0) {
                     LOG.info("records: " + numberOfRecords);
                 } else {
                     LOG.debug("records: " + numberOfRecords);
@@ -127,7 +130,8 @@ public class OutputDataConnect {
 
             while (jsonReader.hasNext()) {
                 JsonObject jsonObj = gson.fromJson(jsonReader, JsonObject.class);
-                variantList.add(jsonObj);
+                String variantPid = jsonObj.get("pid").getAsString();
+                variantMap.put(variantPid, jsonObj);
 
                 // status
                 numberOfRecords++;
@@ -160,6 +164,7 @@ public class OutputDataConnect {
 
             /* output file setup */
             JsonWriter writer = new JsonWriter(new OutputStreamWriter(new FileOutputStream(cOutputFile + ".json")));
+            writer.setIndent("    ");
 
             // write opening square bracket
             writer.beginArray();
@@ -213,18 +218,12 @@ public class OutputDataConnect {
 
     public void handleVariants(JsonWriter writer, JsonObject jsonObj) {
         // see if there are any matching by pid
-        JsonElement pid = jsonObj.get("pid");
+        String pid = jsonObj.get("pid").getAsString();
         LOG.debug("Getting variants for pid: " + pid);
 
         // temp holder for matches
-        List<JsonObject> matching = new ArrayList<JsonObject>();
-
-        for (JsonObject variant: variantList) {
-            JsonElement variantPid = variant.get("pid");
-            if (pid.equals(variantPid)) {
-                matching.add(variant);
-            }
-        }
+        Collection<JsonObject> srcCollection = variantMap.get(pid);
+        List<JsonObject> matching = new ArrayList<JsonObject>(srcCollection);
 
         try {
             // if yes, create <variants>

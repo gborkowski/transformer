@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -94,8 +95,11 @@ public class Processors {
             int sizeOfArr = arr.length;
 
             if (posA + 1 > sizeOfArr - 1 || posB + 1 > sizeOfArr) {
-                LOG.error("SplitRow, index of positions defined are bad, sizeOfArray after split: " + sizeOfArr);
-                LOG.error("SplitRow, data: " + toBeSplit);
+                LOG.warn("SplitRow, index of positions defined are bad, sizeOfArray after split: " + sizeOfArr);
+                LOG.warn("SplitRow, data: " + toBeSplit);
+                LOG.warn("SplitRow, Using single value for both targetA and targetB");
+                dataObj.addProperty(targetLabelA, toBeSplit);
+                dataObj.addProperty(targetLabelB, toBeSplit);
             } else {
                 /* add two new properties */
                 dataObj.addProperty(targetLabelA, arr[posA]);
@@ -145,42 +149,191 @@ public class Processors {
         JsonObject dataObj,
         Attributes attribute,
         String targetEntity) {
+        String firstDelimiter = "";
         String secondDelimiter = "";
-        String delimiterNameValue = "";
+        String pattern = "";
 
         /* getting config values */
         for (ProcessorConfigItem item : args) {
+            if ("firstDelimiter".equals(item.getName())) {
+                firstDelimiter = item.getValue();
+            }
             if ("secondDelimiter".equals(item.getName())) {
                 secondDelimiter = item.getValue();
             }
-            if ("delimiterNameValue".equals(item.getName())) {
-                delimiterNameValue = item.getValue();
+            if ("pattern".equals(item.getName())) {
+                pattern = item.getValue();
             }
         }
 
         LOG.debug("MultiAttribute: in: " + in);
-        String[] entities = in.split(secondDelimiter);
+
+        if ("pattern1".equals(pattern)) {
+            multiAttributePattern1(args, in, dataObj, attribute, targetEntity, firstDelimiter, secondDelimiter);
+        }
+        if ("pattern2".equals(pattern)) {
+            multiAttributePattern2(args, in, dataObj, attribute, targetEntity, firstDelimiter, secondDelimiter);
+        }
+
+        return in;
+    }
+
+    /***********************************************/
+
+    public void multiAttributePattern1(
+        ArrayList<ProcessorConfigItem> args,
+        String in,
+        JsonObject dataObj,
+        Attributes attribute,
+        String targetEntity,
+        String firstDelimiter,
+        String secondDelimiter) {
+
+        /*
+        * Assumes input that looks like: name:value>name:value>name:value”
+        * firstDelimiter=>
+        * secondDelimiter=:
+        */
+        LOG.debug("MultiAttribute: pattern 1");
+
+        String[] entities = in.split(firstDelimiter);
         int sizeOfEntityArr = entities.length;
 
         for (int x = 0; x < sizeOfEntityArr; x++) {
             LOG.debug("MultiAttribute: entities[" + x + "]" + entities[x]);
 
-            String[] pairs = entities[x].split(delimiterNameValue);
+            String[] pairs = entities[x].split(secondDelimiter);
             if (pairs.length == 2) {
                 String name = pairs[0];
+
+                /* have to clean up attribute names */
+                name = name.replaceAll("-", "_");
+                name = name.replaceAll("\\.", "");
+                name = name.replaceAll(" ", "_");
+                name = name.replaceAll("\\/", "_");
                 String value = pairs[1];
 
                 if (name != null && value != null) {
                     LOG.debug("MultiAttribute: name: " + name + ", value: " + value);
                     attribute.addAttributeToJson(dataObj, name, value, targetEntity);
                 } else {
-                    LOG.debug("MultiAttribute: something is null, not adding.  name: " + name + ", value: " + value);
+                    LOG.warn("MultiAttribute: something is null, not adding.  name: " + name + ", value: " + value);
                 }
             } else {
-                LOG.debug("MultiAttribute: didn't parse into usable name / value pairs." + pairs);
+                LOG.warn("MultiAttribute: didn't parse into usable name / value pairs." + pairs);
             }
         }
-        return in;
+    }
+
+    /***********************************************/
+
+    public void multiAttributePattern2(
+        ArrayList<ProcessorConfigItem> args,
+        String in,
+        JsonObject dataObj,
+        Attributes attribute,
+        String targetEntity,
+        String firstDelimiter,
+        String secondDelimiter) {
+
+        /*
+        ArrayList<String> topAttributes = new ArrayList<String>();
+        topAttributes.add("Typ");
+        topAttributes.add("Gewicht");
+        topAttributes.add("Au");
+        topAttributes.add("führung");
+        topAttributes.add("Profil");
+        topAttributes.add("Länge");
+        topAttributes.add("Länge L");
+        topAttributes.add("Zähnezahl");
+        topAttributes.add("Teilung");
+        topAttributes.add("Breite");
+        topAttributes.add("Außen-Ø D");
+        topAttributes.add("Breite B");
+        topAttributes.add("Innen-Ø d");
+        topAttributes.add("Paket");
+        topAttributes.add("amtlänge");
+        topAttributes.add("Gewinde");
+        topAttributes.add("Innen-Ø");
+        topAttributes.add("Betrieb");
+        topAttributes.add("druck PN");
+        topAttributes.add("chlu");
+        topAttributes.add("Stärke");
+        topAttributes.add("Farbe");
+        topAttributes.add("Nennweite DN");
+        topAttributes.add("Material");
+        topAttributes.add("Anzahl Rippen");
+        topAttributes.add("Spirallänge");
+        topAttributes.add("Außen-Ø");
+        topAttributes.add("tärke");
+        topAttributes.add("Kettentyp");
+        topAttributes.add("Antrieb");
+        */
+
+        /*
+        * Specific to Haberkorn
+        * Assumes input that looks like: A|B|C;R|D|G;X|U|K”
+        * firstDelimiter=|
+        * secondDelimiter=;
+        * result: attribute A=BC, R=DG, X=UK
+        */
+        LOG.debug("MultiAttribute: pattern 2: " + in);
+
+        String[] entities = in.split(firstDelimiter, 3);
+        int sizeOfEntityArr = entities.length;
+
+        if (sizeOfEntityArr == 3) {
+            int count0 = StringUtils.countMatches(entities[0], secondDelimiter);
+            int count1 = StringUtils.countMatches(entities[1], secondDelimiter);
+            int count2 = StringUtils.countMatches(entities[2], secondDelimiter);
+
+            LOG.debug("entities[0]: " + entities[0]);
+            LOG.debug("entities[1]: " + entities[1]);
+            LOG.debug("entities[2]: " + entities[2]);
+
+            if (count0 == count1 && count1 == count2) {
+                String[] sa_name_split = entities[0].split(secondDelimiter, -1);
+                String[] sa_value_split = entities[1].split(secondDelimiter, -1); // -1 allows nulls - need this
+                String[] sa_uom_split = entities[2].split(secondDelimiter, -1); // -1 allows nulls - need this
+
+                for (int y = 0; y < sa_name_split.length; y++) {
+                    //if (topAttributes.contains(sa_name_split[y])) {
+                    if (sa_name_split.length > y) {
+                        String name = StringUtils.stripAccents(sa_name_split[y]);
+
+                        /* have to clean up attribute names */
+                        name = name.replaceAll("-", "_");
+                        name = name.replaceAll("\\.", "");
+                        name = name.replaceAll(" ", "_");
+                        name = name.replaceAll("\\/", "_");
+                        LOG.debug("y: " + y);
+                        LOG.debug("name: " + name);
+                        LOG.debug("sa_name_split.length: " + sa_name_split.length);
+                        LOG.debug("sa_value_split.length: " + sa_value_split.length);
+                        LOG.debug("sa_uom_split.length: " + sa_uom_split.length);
+                        String value = "";
+                        if (sa_value_split.length > y) {
+                            value = sa_value_split[y];
+                            if (sa_uom_split.length > y) {
+                                value += sa_uom_split[y];
+                            }
+                        }
+
+                        if (name != null && value != null && !"".equals(name)) {
+                            LOG.debug("MultiAttribute: name: " + name + ", value: " + value);
+                            attribute.addAttributeToJson(dataObj, name, value, targetEntity);
+                        }
+                    } else {
+                        LOG.warn("MultiAttribute: sa_name_split null (not enough array values): " + sa_name_split);
+                    }
+                    //}
+                }
+            } else {
+                LOG.error("MultiAttribute: didn't parse into usable name / value pairs.  Counts didn't match");
+            }
+        } else {
+            LOG.error("MultiAttribute: didn't parse into usable name / value pairs.  Split array size = " + sizeOfEntityArr + ": " + in);
+        }
     }
 
     /***********************************************/
@@ -378,23 +531,24 @@ public class Processors {
     /***********************************************/
 
     public String specialCharacters(ArrayList<ProcessorConfigItem> args, String in) {
-        String customerName = "";
+        String result = in;
 
-        for (ProcessorConfigItem item : args) {
-            if ("customerName".equals(item.getName())) {
-                customerName = item.getValue();
+        LOG.debug("specialCharacters: customerName: " + getCustomer());
+
+        // fixes Haberkorn price field
+        if ("Haberkorn".equals(getCustomer())) {
+            String p = in.replaceAll(",", ".");
+            String[] price = p.split("\\s");
+            String goodPrice = price[0].replaceAll("€", "");
+            int index = goodPrice.indexOf(".");
+            result = goodPrice;
+
+            if (goodPrice.indexOf(".") != goodPrice.lastIndexOf(".")) {
+                result = goodPrice.substring(0, index) +  goodPrice.substring(index + 1);
             }
         }
 
-        LOG.info("specialCharacters: customerName: " + customerName);
-
-        /*
-            Things to consider:
-                - quotes (single and double) - escape them
-                - what else?
-        */
-
-        return in;
+        return result;
     }
 
     /***********************************************/

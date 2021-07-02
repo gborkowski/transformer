@@ -602,7 +602,7 @@ public class TransformPhase {
                 /* had to do this to allow for non-string attributes */
                 /* if this is configured with multi, the attributes have already been added */
                 if (!hasMultiAttributeProcessor(fm)) {
-                    /* add attribute */
+                    /* add as single attribute */
                     getAttributes().addAttributeToJson(product, targetLabel, fixed, targetEntity);
                 }
             } else {
@@ -616,7 +616,7 @@ public class TransformPhase {
                 /* had to do this to allow for non-string attributes */
                 /* if this is configured with multi, the attributes have already been added */
                 if (!hasMultiAttributeProcessor(fm)) {
-                    /* add attribute */
+                    /* add as single attribute */
                     getAttributes().addAttributeToJson(variant, targetLabel, fixed, targetEntity);
                 }
             } else {
@@ -790,6 +790,8 @@ public class TransformPhase {
     public void performAnalysis(boolean hasVariants) {
         LOG.info("Starting analysis...");
         LOG.info("Total unique products: " + productList.size());
+
+        /* dump this out to tab delimited file so people can review in excel */
         LOG.info("Unique product attributes added: " + getAttributes().getProductAttributeList().size());
         LOG.info("Unique product attribute values added: " + getAttributes().getProductAttributeValueList().size());
 
@@ -797,6 +799,8 @@ public class TransformPhase {
 
         if (hasVariants) {
             LOG.info("Total unique variants: " + variantList.size());
+
+            /* dump this out to tab delimited file so people can review in excel */
             LOG.info("Unique variant attributes added: " + getAttributes().getVariantAttributeList().size());
             LOG.info("Unique variant attribute values added: " + getAttributes().getVariantAttributeValueList().size());
 

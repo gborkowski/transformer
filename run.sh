@@ -13,6 +13,6 @@ export CLASSPATH=$CLASSPATH:$BASE/transformer-1.0-SNAPSHOT-jar-with-dependencies
 #
 # for the above, you would use Graybar as the argument
 
-#java com.br.transform.ImportPhase Petco
-java com.br.transform.TransformPhase VS
-#java com.br.transform.OutputPhase VS
+#java com.br.transform.ImportPhase Haberkorn
+#java com.br.transform.TransformPhase Haberkorn
+java com.br.transform.OutputPhase Haberkorn
