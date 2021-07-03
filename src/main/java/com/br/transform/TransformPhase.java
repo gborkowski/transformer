@@ -239,6 +239,12 @@ public class TransformPhase {
 
         for (FieldMap item : fm) {
             String targetLabel = item.getTargetLabel();
+
+            // validate label
+            if (!validateLabel(targetLabel)) {
+                return false;
+            }
+
             switch (targetLabel.toUpperCase()) {
                 case "PID":
                     hasPid = true;
@@ -325,6 +331,40 @@ public class TransformPhase {
         }
         if (!hasVariants && containsVariants) {
             LOG.error("validateFieldMapConfig: configured as no variants, but fieldMap contains fields defined with targetEntity=variant, exiting.");
+            return false;
+        }
+
+        return true;
+    }
+
+    /***********************************************/
+
+    boolean validateLabel(String label) {
+
+        // check reserved
+        ArrayList<String> reserved = new ArrayList<String>();
+        reserved.add("op");
+        reserved.add("path");
+        reserved.add("views");
+        reserved.add("variants");
+        reserved.add("attributes");
+
+        boolean isReserved = reserved.contains(label);
+        if (isReserved) {
+            LOG.error("validateLabel: invalid - reserved word: " + label);
+            return false;
+        }
+
+        // check alphanumeric
+        boolean isAlpha = label.matches("^[a-zA-Z0-9_]*$");
+        if (!isAlpha) {
+            LOG.error("validateLabel: invalid - remove special characters, spaces, etc: " + label);
+            return false;
+        }
+
+        // check starts with a letter
+        if (!Character.isLetter(label.charAt(0))) {
+            LOG.error("validateLabel: invalid - must start with a letter: " + label);
             return false;
         }
 

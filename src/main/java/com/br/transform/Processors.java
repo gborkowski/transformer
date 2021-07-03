@@ -207,10 +207,13 @@ public class Processors {
                 String name = pairs[0];
 
                 /* have to clean up attribute names */
-                name = name.replaceAll("-", "_");
-                name = name.replaceAll("\\.", "");
-                name = name.replaceAll(" ", "_");
-                name = name.replaceAll("\\/", "_");
+                if (!validateLabel(name)) {
+                    name = name.replaceAll("[^a-zA-Z0-9_]", "_");
+                    if (!Character.isLetter(name.charAt(0))) {
+                        name = "a" + name; // quick fix
+                    }
+                }
+
                 String value = pairs[1];
 
                 if (name != null && value != null) {
@@ -302,10 +305,12 @@ public class Processors {
                         String name = StringUtils.stripAccents(sa_name_split[y]);
 
                         /* have to clean up attribute names */
-                        name = name.replaceAll("-", "_");
-                        name = name.replaceAll("\\.", "");
-                        name = name.replaceAll(" ", "_");
-                        name = name.replaceAll("\\/", "_");
+                        if (!validateLabel(name)) {
+                            name = name.replaceAll("[^a-zA-Z0-9_]", "_");
+                            if (!Character.isLetter(name.charAt(0))) {
+                                name = "a" + name; // quick fix
+                            }
+                        }
                         LOG.debug("y: " + y);
                         LOG.debug("name: " + name);
                         LOG.debug("sa_name_split.length: " + sa_name_split.length);
@@ -334,6 +339,40 @@ public class Processors {
         } else {
             LOG.error("MultiAttribute: didn't parse into usable name / value pairs.  Split array size = " + sizeOfEntityArr + ": " + in);
         }
+    }
+
+    /***********************************************/
+
+    boolean validateLabel(String label) {
+
+        // check reserved
+        ArrayList<String> reserved = new ArrayList<String>();
+        reserved.add("op");
+        reserved.add("path");
+        reserved.add("views");
+        reserved.add("variants");
+        reserved.add("attributes");
+
+        boolean isReserved = reserved.contains(label);
+        if (isReserved) {
+            LOG.error("validateLabel: invalid - reserved word: " + label);
+            return false;
+        }
+
+        // check alphanumeric
+        boolean isAlpha = label.matches("^[a-zA-Z0-9_]*$");
+        if (!isAlpha) {
+            LOG.error("validateLabel: invalid - remove special characters, spaces, etc: " + label);
+            return false;
+        }
+
+        // check starts with a letter
+        if (!Character.isLetter(label.charAt(0))) {
+            LOG.error("validateLabel: invalid - must start with a letter: " + label);
+            return false;
+        }
+
+        return true;
     }
 
     /***********************************************/
@@ -591,7 +630,7 @@ public class Processors {
     /***********************************************/
 
     public String makeAlphaNumeric(String in) {
-        return in.replaceAll("[^a-zA-Z0-9]", "");
+        return in.replaceAll("[^a-zA-Z0-9_]", "");
     }
 
     /***********************************************/

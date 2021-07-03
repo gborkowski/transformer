@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
@@ -172,21 +173,19 @@ public class OutputDataConnect {
             while (jsonReader.hasNext()) {
                 JsonObject jsonObj = gson.fromJson(jsonReader, JsonObject.class);
 
-                // get keys for json object
-                Set<String> keys = jsonObj.keySet();
-                Iterator<String> it = keys.iterator();
+                // for dataConnect, have to format things in certain way
+                JsonObject dcFormat = convertTransformedProductToDataConnectFormat(jsonObj, hasVariants);
 
                 // write opening curly bracket
                 writer.beginObject();
 
+                // get keys for json object
+                Set<String> keys = dcFormat.keySet();
+                Iterator<String> it = keys.iterator();
+
                 while (it.hasNext()) {
                     String key = it.next();
-                    switchOnElementType(writer, jsonObj.get(key), key);
-                }
-
-                // handle adding variants
-                if (hasVariants) {
-                    handleVariants(writer, jsonObj);
+                    switchOnElementType(writer, dcFormat.get(key), key);
                 }
 
                 // write closing curly bracket
@@ -216,46 +215,180 @@ public class OutputDataConnect {
 
     /***********************************************/
 
-    public void handleVariants(JsonWriter writer, JsonObject jsonObj) {
-        // see if there are any matching by pid
-        String pid = jsonObj.get("pid").getAsString();
-        LOG.debug("Getting variants for pid: " + pid);
+    public JsonObject convertTransformedProductToDataConnectFormat(JsonObject transformed, boolean hasVariants) {
 
-        // temp holder for matches
+        // this is the main dc object we're formatting
+        JsonObject dcFormat = new JsonObject();
+        boolean hasViews = false;
+        Gson gson = new Gson();
+
+        // add op:add
+        dcFormat.addProperty("op", "add");
+
+        // add path:/products/$pid
+        String pid = transformed.get("pid").getAsString();
+        dcFormat.addProperty("path", "/products/" + pid);
+
+        // create value and attributes
+        JsonObject value = new JsonObject();
+        JsonObject attributes = new JsonObject();
+
+        // add product properties and attributes (if any) to attributes
+        Set<String> keys = transformed.keySet();
+        Iterator<String> it = keys.iterator();
+
+        while (it.hasNext()) {
+            String key = it.next();
+            JsonElement je = transformed.get(key);
+
+            // test if views is in the object - if so, do not treat like normal property
+            if ("views".equals(key)) {
+                hasViews = true;
+                continue;
+            }
+
+            if (je instanceof JsonArray) {
+                /* this must (or at least should) be the attributes array */
+                JsonArray ja = je.getAsJsonArray();
+
+                Iterator<JsonElement> it2 = ja.iterator();
+                while (it2.hasNext()) {
+                    JsonElement jeAttribute = it2.next();
+                    AttributeItem ai = gson.fromJson(jeAttribute, AttributeItem.class);
+                    LOG.debug("convertTransformedProductToDataConnectFormat: AttributeItem: " + ai.getName() + ", " + ai.getValue());
+
+                    // write attribute property
+                    attributes.addProperty(ai.getName(), ai.getValue());
+                }
+            } else if (je instanceof JsonObject) {
+                LOG.error("convertTransformedProductToDataConnectFormat: json has a JsonObject - should not have this.");
+            } else if (je instanceof JsonPrimitive) {
+                // write normal property
+                LOG.debug("convertTransformedProductToDataConnectFormat: Property: " + key + ", " + je.getAsString());
+                attributes.addProperty(key, je.getAsString());
+            } else {
+                LOG.error("convertTransformedProductToDataConnectFormat: unsupported type");
+            }
+        }
+
+        // add attributes to value
+        value.add("attributes", attributes);
+
+        // add variants to value
+        if (hasVariants) {
+            JsonObject variants = new JsonObject();
+            variants = mapVariantsToDataConnectFormat(variants, transformed);
+            if (variants != null) {
+                value.add("variants", variants);
+            }
+        }
+
+        // add views to value
+        if (hasViews) {
+            JsonObject views = new JsonObject();
+            views = mapViews(views, transformed);
+            if (views != null) {
+                value.add("views", views);
+            }
+        }
+        // add value as property to dcFormat
+        dcFormat.add("value", value);
+
+        return dcFormat;
+    }
+
+    /***********************************************/
+
+    public JsonObject mapViews(JsonObject views, JsonObject transformed) {
+
+        // for data connect, views must be named 'views'
+        String viewStr = transformed.get("views").getAsString();
+
+        // loop (comma delimited) viewStr to get view values
+        String[] viewArr = viewStr.split(",");
+        int viewArrLength = viewArr.length;
+        if (viewArrLength == 0) {
+            return null;
+        }
+
+        // create view object (empty) for each viewId
+        for (int x = 0; x < viewArrLength; x++) {
+            JsonObject v = new JsonObject();
+
+            // add view objects to views
+            views.add(viewArr[x], v);
+        }
+
+        return views;
+    }
+
+    /***********************************************/
+
+    public JsonObject mapVariantsToDataConnectFormat(JsonObject variants, JsonObject transformed) {
+        // copy variant properties and attributes into variants object in proper format
+        Gson gson = new Gson();
+
+        // see if there are any matching by pid
+        String pid = transformed.get("pid").getAsString();
+        LOG.debug("mapVariantsToDataConnectFormat: Getting variants for pid: " + pid);
+
         Collection<JsonObject> srcCollection = variantMap.get(pid);
         List<JsonObject> matching = new ArrayList<JsonObject>(srcCollection);
 
-        try {
-            // if yes, create <variants>
-            if (matching.size() > 0) {
-                LOG.debug("Starting to add variants");
-                writer.name("variants");
+        if (matching.size() > 0) {
+            LOG.debug("Starting to add variants");
+            JsonObject variant = new JsonObject();
+            JsonObject attributes = new JsonObject();
 
-                /* begin variants array */
-                writer.beginArray();
+            for (JsonObject currentVariant: matching) {
+                Set<String> keys = currentVariant.keySet();
+                Iterator<String> it = keys.iterator();
+                String skuId = "";
 
-                for (JsonObject var: matching) {
-                    Set<String> keys = var.keySet();
-                    Iterator<String> it = keys.iterator();
+                // loop for each property and attributes within the current variant
+                while (it.hasNext()) {
+                    String key = it.next();
+                    JsonElement je = currentVariant.get(key);
 
-                    /* start this variant */
-                    writer.beginObject();
-
-                    while (it.hasNext()) {
-                        String key = it.next();
-                        switchOnElementType(writer, var.get(key), key);
+                    // get skuId
+                    if ("sku_id".equals(key)) {
+                        skuId = je.getAsString();
                     }
 
-                    /* end of this variant */
-                    writer.endObject();
+                    if (je instanceof JsonArray) {
+                        /* this must (or at least should) be the attributes array */
+                        JsonArray ja = je.getAsJsonArray();
+
+                        Iterator<JsonElement> it2 = ja.iterator();
+                        while (it2.hasNext()) {
+                            JsonElement jeAttribute = it2.next();
+                            AttributeItem ai = gson.fromJson(jeAttribute, AttributeItem.class);
+                            LOG.debug("mapVariantsToDataConnectFormat: AttributeItem: " + ai.getName() + ", " + ai.getValue());
+
+                            // write attribute property
+                            attributes.addProperty(ai.getName(), ai.getValue());
+                        }
+                    } else if (je instanceof JsonObject) {
+                        LOG.error("mapVariantsToDataConnectFormat: json has a JsonObject - should not have this.");
+                    } else if (je instanceof JsonPrimitive) {
+                        // write normal property
+                        attributes.addProperty(key, je.getAsString());
+                    } else {
+                        LOG.error("mapVariantsToDataConnectFormat: unsupported type");
+                    }
                 }
 
-                /* end variants */
-                writer.endArray();
+                // add attributes to variant
+                variant.add("attributes", attributes);
+
+                // add variant to variants
+                variants.add(skuId, variant);
             }
-        } catch (IOException ioe) {
-            LOG.error("handleVariants: " + ioe);
+        } else {
+            return null;
         }
+
+        return variants;
     }
 
     /***********************************************/
@@ -308,15 +441,40 @@ public class OutputDataConnect {
     /***********************************************/
 
     public void handleObject(JsonWriter writer, JsonObject jo, String key) {
-        LOG.debug("handleObject: Not implemented: " + key);
+        LOG.debug("handleObject: " + key);
+
+        try {
+            writer.name(key);
+
+            writer.beginObject();
+
+            // handle objects (with children?)
+            Set<Map.Entry<String, JsonElement>> js = jo.entrySet();
+            Iterator<Map.Entry<String, JsonElement>> it = js.iterator();
+
+            while (it.hasNext()) {
+                Map.Entry<String, JsonElement> child = it.next();
+
+                // some sick recursion
+                switchOnElementType(writer, child.getValue(), child.getKey());
+            }
+
+            writer.endObject();
+
+        } catch (IOException e) {
+            LOG.error("handlePrimitive: " + e);
+        }
     }
 
     /***********************************************/
 
     public void handlePrimitive(JsonWriter writer, JsonPrimitive jp, String key) {
         try {
-            LOG.debug("handlePrimitive: " + key + ", " + jp.getAsString());
-            writer.name(key).value(jp.getAsString());
+            // don't write out pid or sku_id for dataConnect
+            if (!"pid".equals(key) && !"sku_id".equals(key) && !"skuid".equals(key)) {
+                LOG.debug("handlePrimitive: " + key + ", " + jp.getAsString());
+                writer.name(key).value(jp.getAsString());
+            }
         } catch (IOException e) {
             LOG.error("handlePrimitive: " + e);
         }
