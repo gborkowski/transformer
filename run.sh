@@ -1,6 +1,7 @@
 #!/bin/sh
 
 export BASE=/Users/glen.borkowski/BR/java/vscode_projects/transformer/target
+export GOOGLE_APPLICATION_CREDENTIALS=$BASE/../transform-2a333-firebase-adminsdk-26yti-b42ad15736.json
 
 export CLASSPATH=$CLASSPATH:$BASE/../log4j2.xml
 export CLASSPATH=$CLASSPATH:$BASE/transformer-1.0-SNAPSHOT-jar-with-dependencies.jar
@@ -14,5 +15,5 @@ export CLASSPATH=$CLASSPATH:$BASE/transformer-1.0-SNAPSHOT-jar-with-dependencies
 # for the above, you would use Graybar as the argument
 
 #java com.br.transform.ImportPhase Haberkorn
-java com.br.transform.TransformPhase Haberkorn
-#java com.br.transform.OutputPhase Haberkorn
+#java com.br.transform.TransformPhase Haberkorn
+java com.br.transform.OutputPhase Haberkorn

@@ -105,20 +105,21 @@ public class TransformPhase {
         /* Getting properties */
         TransformerPropertiesManager tpm = new TransformerPropertiesManager();
         tpm.setCustomerName(args[0]);
+        TransformerProperties tp = tpm.getTransformerProperties();
 
         /* Individual properties */
-        String cMainCustomerDirectory = tpm.getTransformerProperties().getMainCustomerDirectory();
-        String cTransformOutputDirectory = tpm.getTransformerProperties().getTransformOutputDirectory();
-        String cCustomerName = tpm.getTransformerProperties().getCustomerName();
-        Boolean cHasVariants = tpm.getTransformerProperties().getHasVariants();
-        Boolean cHasProductAttributes = tpm.getTransformerProperties().getHasProductAttributes();
-        Boolean cHasVariantAttributes = tpm.getTransformerProperties().getHasVariantAttributes();
-        String cOutputFormat = tpm.getTransformerProperties().getOutputFormat();
-        String cInputFile = tpm.getTransformerProperties().getImportOutputFile();
-        String cRowMapFile = tpm.getTransformerProperties().getRowMapFile();
-        String cFieldMapFile = tpm.getTransformerProperties().getFieldMapFile();
-        String cOutputProductFile = tpm.getTransformerProperties().getTransformOutputProductFile();
-        String cOutputVariantFile = tpm.getTransformerProperties().getTransformOutputVariantFile();
+        String cMainCustomerDirectory = tp.getMainCustomerDirectory();
+        String cTransformOutputDirectory = tp.getTransformOutputDirectory();
+        String cCustomerName = tp.getCustomerName();
+        Boolean cHasVariants = tp.getHasVariants();
+        Boolean cHasProductAttributes = tp.getHasProductAttributes();
+        Boolean cHasVariantAttributes = tp.getHasVariantAttributes();
+        String cOutputFormat = tp.getOutputFormat();
+        String cInputFile = tp.getImportOutputFile();
+        String cRowMapFile = tp.getRowMapFile();
+        String cFieldMapFile = tp.getFieldMapFile();
+        String cOutputProductFile = tp.getTransformOutputProductFile();
+        String cOutputVariantFile = tp.getTransformOutputVariantFile();
 
         /* gloabl settings */
         transformPhase.setConfiguredProductAttributes(cHasProductAttributes);

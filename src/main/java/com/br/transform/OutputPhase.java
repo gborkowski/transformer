@@ -21,15 +21,16 @@ public class OutputPhase {
         /* Getting properties file */
         TransformerPropertiesManager tpm = new TransformerPropertiesManager();
         tpm.setCustomerName(args[0]);
+        TransformerProperties tp = tpm.getTransformerProperties();
 
         /* Individual properties */
-        String cMainCustomerDirectory = tpm.getTransformerProperties().getMainCustomerDirectory();
-        String cTransformOutputDirectory = tpm.getTransformerProperties().getTransformOutputDirectory();
-        String cInputProductFile = tpm.getTransformerProperties().getTransformOutputProductFile();
-        String cInputVariantFile = tpm.getTransformerProperties().getTransformOutputVariantFile();
-        Boolean cHasVariants = tpm.getTransformerProperties().getHasVariants();
-        String cOutputFile = tpm.getTransformerProperties().getOutputOutputFile();
-        String cOutputFormat = tpm.getTransformerProperties().getOutputFormat();
+        String cMainCustomerDirectory = tp.getMainCustomerDirectory();
+        String cTransformOutputDirectory = tp.getTransformOutputDirectory();
+        String cInputProductFile = tp.getTransformOutputProductFile();
+        String cInputVariantFile = tp.getTransformOutputVariantFile();
+        Boolean cHasVariants = tp.getHasVariants();
+        String cOutputFile = tp.getOutputOutputFile();
+        String cOutputFormat = tp.getOutputFormat();
 
         /* setup file variables */
         cInputProductFile = cMainCustomerDirectory + cTransformOutputDirectory + cInputProductFile;

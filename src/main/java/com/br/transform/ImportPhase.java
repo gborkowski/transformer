@@ -48,30 +48,30 @@ public class ImportPhase {
         /* Getting properties file */
         TransformerPropertiesManager tpm = new TransformerPropertiesManager();
         tpm.setCustomerName(args[0]);
+        TransformerProperties tp = tpm.getTransformerProperties();
 
         /* Individual properties */
-        String cMainCustomerDirectory = tpm.getTransformerProperties().getMainCustomerDirectory();
-        String cTransformOutputDirectory = tpm.getTransformerProperties().getTransformOutputDirectory();
+        String cMainCustomerDirectory = tp.getMainCustomerDirectory();
+        String cTransformOutputDirectory = tp.getTransformOutputDirectory();
 
-        String cInputFile = tpm.getTransformerProperties().getImportInputFile();
-        String cFileType = tpm.getTransformerProperties().getFileType();
-        String cOutputFile = tpm.getTransformerProperties().getImportOutputFile();
-        String cRowMapFile = tpm.getTransformerProperties().getRowMapFile();
-        String cFieldMapFile = tpm.getTransformerProperties().getFieldMapFile();
-        String cCharacterSet = tpm.getTransformerProperties().getCharacterSet();
+        String cInputFile = tp.getImportInputFile();
+        String cFileType = tp.getFileType();
+        String cOutputFile = tp.getImportOutputFile();
+        String cRowMapFile = tp.getRowMapFile();
+        String cFieldMapFile = tp.getFieldMapFile();
+        String cCharacterSet = tp.getCharacterSet();
+        Boolean cHasVariants = tp.getHasVariants();
 
         /* Delimited properties */
-        String cFieldSeparator = tpm.getTransformerProperties().getFieldSeparator();
-
-        Boolean cHeaderRowExists = tpm.getTransformerProperties().getHeaderRowExists();
+        String cFieldSeparator = tp.getFieldSeparator();
+        Boolean cHeaderRowExists = tp.getHeaderRowExists();
         boolean headerRowExists = cHeaderRowExists.booleanValue();
 
         /* XML properties */
-        String cMainXMLEntity = tpm.getTransformerProperties().getMainXMLEntity();
-        String cProductXMLEntity = tpm.getTransformerProperties().getProductXMLEntity();
-        String cVariantXMLEntity = tpm.getTransformerProperties().getVariantXMLEntity();
-        Boolean cHasVariants = tpm.getTransformerProperties().getHasVariants();
-        String cPreserveValuesForSourceEntities = tpm.getTransformerProperties().getPreserveValuesForSourceEntities();
+        String cMainXMLEntity = tp.getMainXMLEntity();
+        String cProductXMLEntity = tp.getProductXMLEntity();
+        String cVariantXMLEntity = tp.getVariantXMLEntity();
+        String cPreserveValuesForSourceEntities = tp.getPreserveValuesForSourceEntities();
 
         /* Check that files & directories are there */
         importPhase.createTransformOutputDirectoryIfMissing(cMainCustomerDirectory + cTransformOutputDirectory);
