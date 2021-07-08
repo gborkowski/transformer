@@ -4,17 +4,13 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.Reader;
 import java.io.Writer;
-import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -94,7 +90,7 @@ public class TransformPhase {
     public static void main(String[] args) {
 
         if (args.length == 0) {
-            LOG.error("Error: you must specify the sub directory of the properties files (i.e. customer)");
+            LOG.error("Error: you must specify the customer name, exiting...");
             System.exit(0);
         }
 
@@ -107,6 +103,18 @@ public class TransformPhase {
         tpm.setCustomerName(args[0]);
         TransformerProperties tp = tpm.getTransformerProperties();
 
+        /* Getting Row and Field maps */
+        TransformerMappingManager tmm = new TransformerMappingManager();
+        tmm.setCustomerName(args[0]);
+        RowMap rm = new RowMap();
+        SuperRowMap srm = tmm.getRowMapFromDB();
+        rm.setFilterProcessors(srm.getFilterProcessors());
+        rm.setSplitProcessors(srm.getSplitProcessors());
+        rm.setMergeProcessors(srm.getMergeProcessors());
+        transformPhase.setRowMap(rm);
+        SuperFieldMap sfm = tmm.getFieldMapFromDB();
+        transformPhase.setFieldMap(sfm.getFieldMaps());
+
         /* Individual properties */
         String cMainCustomerDirectory = tp.getMainCustomerDirectory();
         String cTransformOutputDirectory = tp.getTransformOutputDirectory();
@@ -116,8 +124,6 @@ public class TransformPhase {
         Boolean cHasVariantAttributes = tp.getHasVariantAttributes();
         String cOutputFormat = tp.getOutputFormat();
         String cInputFile = tp.getImportOutputFile();
-        String cRowMapFile = tp.getRowMapFile();
-        String cFieldMapFile = tp.getFieldMapFile();
         String cOutputProductFile = tp.getTransformOutputProductFile();
         String cOutputVariantFile = tp.getTransformOutputVariantFile();
 
@@ -129,14 +135,7 @@ public class TransformPhase {
         cInputFile = cMainCustomerDirectory + cTransformOutputDirectory + cInputFile;
         cOutputProductFile = cMainCustomerDirectory + cTransformOutputDirectory + cOutputProductFile;
         cOutputVariantFile = cMainCustomerDirectory + cTransformOutputDirectory + cOutputVariantFile;
-        cFieldMapFile = cMainCustomerDirectory + cTransformOutputDirectory + cFieldMapFile;
-        cRowMapFile = cMainCustomerDirectory + cTransformOutputDirectory + cRowMapFile;
-
-        /* load rowMap config */
-        transformPhase.loadRowMapConfig(cRowMapFile);
-
-        /* load fieldMap config */
-        transformPhase.loadFieldMapConfig(cFieldMapFile);
+        String analysisDirectory = cMainCustomerDirectory + cTransformOutputDirectory;
 
         /* validate fieldMap attribute config */
         boolean configValid = transformPhase.validateFieldMapAttributeConfig(cHasVariants.booleanValue());
@@ -156,7 +155,7 @@ public class TransformPhase {
         }
 
         /* perform analysis on products / variants --> output file */
-        transformPhase.performAnalysis(cHasVariants.booleanValue());
+        transformPhase.performAnalysis(cHasVariants.booleanValue(), analysisDirectory);
 
         LOG.info("Total Time Taken : " + (System.currentTimeMillis() - startTotal) / 1000 + " secs");
     }
@@ -189,35 +188,6 @@ public class TransformPhase {
         }
 
         return true;
-    }
-
-    /***********************************************/
-
-    public void loadRowMapConfig(String rowMapFilename) {
-
-        Gson gson = new Gson();
-        try (Reader reader = new FileReader(rowMapFilename)) {
-            RowMap rm = gson.fromJson(reader, RowMap.class);
-            setRowMap(rm);
-            reader.close();
-        } catch (IOException e) {
-            LOG.error("loadRowMapConfig: " + e);
-        }
-    }
-
-    /***********************************************/
-
-    public void loadFieldMapConfig(String fieldMapFilename) {
-
-        Gson gson = new Gson();
-        try (Reader reader = new FileReader(fieldMapFilename)) {
-            Type fieldMapListType = new TypeToken<ArrayList<FieldMap>>(){}.getType();
-            List<FieldMap> fm = gson.fromJson(reader, fieldMapListType);
-            setFieldMap(fm);
-            reader.close();
-        } catch (IOException e) {
-            LOG.error("loadFieldMapConfig: " + e);
-        }
     }
 
     /***********************************************/
@@ -828,13 +798,36 @@ public class TransformPhase {
 
     /***********************************************/
 
-    public void performAnalysis(boolean hasVariants) {
+    public void performAnalysis(boolean hasVariants, String analysisDirectory) {
         LOG.info("Starting analysis...");
         LOG.info("Total unique products: " + productList.size());
 
         /* dump this out to tab delimited file so people can review in excel */
         LOG.info("Unique product attributes added: " + getAttributes().getProductAttributeList().size());
+        if (getAttributes().getProductAttributeList().size() > 0) {
+            try {
+                FileWriter writer = new FileWriter(analysisDirectory + "uniqueProductAttributes.txt");
+                for (Map.Entry<String, Integer> item: getAttributes().getProductAttributeList().entrySet()) {
+                    writer.write(item.getKey() + ":" + item.getValue() + System.lineSeparator());
+                }
+                writer.close();
+            } catch (IOException e) {
+                LOG.error("performAnalysis: " + e);
+            }
+        }
+
         LOG.info("Unique product attribute values added: " + getAttributes().getProductAttributeValueList().size());
+        if (getAttributes().getProductAttributeValueList().size() > 0) {
+            try {
+                FileWriter writer = new FileWriter(analysisDirectory + "uniqueProductAttributeValues.txt");
+                for (Map.Entry<String, Integer> item: getAttributes().getProductAttributeValueList().entrySet()) {
+                    writer.write(item.getKey() + ":" + item.getValue() + System.lineSeparator());
+                }
+                writer.close();
+            } catch (IOException e) {
+                LOG.error("performAnalysis: " + e);
+            }
+        }
 
         // top X attributes (sort by value - highest first)
 
@@ -843,7 +836,30 @@ public class TransformPhase {
 
             /* dump this out to tab delimited file so people can review in excel */
             LOG.info("Unique variant attributes added: " + getAttributes().getVariantAttributeList().size());
+            if (getAttributes().getVariantAttributeList().size() > 0) {
+                try {
+                    FileWriter writer = new FileWriter(analysisDirectory + "uniqueVariantAttributes.txt");
+                    for (Map.Entry<String, Integer> item: getAttributes().getVariantAttributeList().entrySet()) {
+                        writer.write(item.getKey() + ":" + item.getValue() + System.lineSeparator());
+                    }
+                    writer.close();
+                } catch (IOException e) {
+                    LOG.error("performAnalysis: " + e);
+                }
+            }
+
             LOG.info("Unique variant attribute values added: " + getAttributes().getVariantAttributeValueList().size());
+            if (getAttributes().getVariantAttributeValueList().size() > 0) {
+                try {
+                    FileWriter writer = new FileWriter(analysisDirectory + "uniqueVariantAttributeValues.txt");
+                    for (Map.Entry<String, Integer> item: getAttributes().getVariantAttributeValueList().entrySet()) {
+                        writer.write(item.getKey() + ":" + item.getValue() + System.lineSeparator());
+                    }
+                    writer.close();
+                } catch (IOException e) {
+                    LOG.error("performAnalysis: " + e);
+                }
+            }
 
             // top X attributes (sort by value - highest first)
             // loop to find max number of variants for a product

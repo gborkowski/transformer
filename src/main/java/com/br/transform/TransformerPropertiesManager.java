@@ -22,6 +22,8 @@ public class TransformerPropertiesManager {
 
     private String customerName = "";
 
+    private Firestore firestoreDB;
+
     public String getCustomerName() {
         return this.customerName;
     }
@@ -30,55 +32,18 @@ public class TransformerPropertiesManager {
         this.customerName = customerName;
     }
 
+    public Firestore getFirestoreDB() {
+        return firestoreDB;
+    }
+
+    public void setFirestoreDB(Firestore firestoreDB) {
+        this.firestoreDB = firestoreDB;
+    }
+
     public TransformerProperties getTransformerProperties() {
-        //return getPropertiesFromFile();
         return getPropertiesFromDB();
     }
-    /***********************************************/
-    /*
-    private TransformerProperties getPropertiesFromFile() {
-        //import java.io.FileInputStream;
-        //import java.util.Properties;
 
-        TransformerProperties tp = new TransformerProperties();
-        try {
-            // Getting properties
-            String rootPath = Thread.currentThread().getContextClassLoader().getResource("").getPath() + "properties/";
-            String appConfigPath = rootPath + getCustomerName() + "/" + "transform.properties";
-            Properties appProps = new Properties();
-            appProps.load(new FileInputStream(appConfigPath));
-
-            // Individual properties
-            tp.setCustomerName(appProps.getProperty("customerName"));
-            tp.setHasProductAttributes(Boolean.parseBoolean(appProps.getProperty("hasProductAttributes")));
-            tp.setHasVariants(Boolean.parseBoolean(appProps.getProperty("hasVariants")));
-            tp.setHasVariantAttributes(Boolean.parseBoolean(appProps.getProperty("hasVariantAttributes")));
-            tp.setOutputFormat(appProps.getProperty("outputFormat"));
-            tp.setMainCustomerDirectory(appProps.getProperty("mainCustomerDirectory"));
-            tp.setTransformOutputDirectory(appProps.getProperty("transformOutputDirectory"));
-            tp.setFieldMapFile(appProps.getProperty("fieldMapFile"));
-            tp.setRowMapFile(appProps.getProperty("rowMapFile"));
-            tp.setImportInputFile(appProps.getProperty("importInputFile"));
-            tp.setImportOutputFile(appProps.getProperty("importOutputFile"));
-            tp.setCharacterSet(appProps.getProperty("characterSet"));
-            tp.setHeaderRowExists(Boolean.parseBoolean(appProps.getProperty("headerRowExists")));
-            tp.setFileType(appProps.getProperty("fileType"));
-            tp.setMainXMLEntity(appProps.getProperty("mainXMLEntity"));
-            tp.setProductXMLEntity(appProps.getProperty("productXMLEntity"));
-            tp.setVariantXMLEntity(appProps.getProperty("variantXMLEntity"));
-            tp.setFieldSeparator(appProps.getProperty("fieldSeparator"));
-            tp.setTransformOutputProductFile(appProps.getProperty("transformOutputProductFile"));
-            tp.setTransformOutputVariantFile(appProps.getProperty("transformOutputVariantFile"));
-            tp.setOutputOutputFile(appProps.getProperty("outputOutputFile"));
-            tp.setPreserveValuesForSourceEntities(appProps.getProperty("preserveValuesForSourceEntities"));
-
-        } catch (IOException e) {
-            LOG.error("Error loading properties from file for customer: " + getCustomerName());
-        }
-
-        return tp;
-    }
-    */
     /***********************************************/
 
     private TransformerProperties getPropertiesFromDB() {
@@ -96,6 +61,9 @@ public class TransformerPropertiesManager {
             FirebaseApp.initializeApp(options);
 
             Firestore db = FirestoreClient.getFirestore();
+
+            setFirestoreDB(db);
+
             CollectionReference customerProperties = db.collection("customerProperties");
             Query customerQuery = customerProperties.whereEqualTo("customerName", getCustomerName());
 
@@ -115,8 +83,6 @@ public class TransformerPropertiesManager {
                 tp.setOutputFormat(document.getString("outputFormat"));
                 tp.setMainCustomerDirectory(document.getString("mainCustomerDirectory"));
                 tp.setTransformOutputDirectory(document.getString("transformOutputDirectory"));
-                tp.setFieldMapFile(document.getString("fieldMapFile"));
-                tp.setRowMapFile(document.getString("rowMapFile"));
                 tp.setImportInputFile(document.getString("importInputFile"));
                 tp.setImportOutputFile(document.getString("importOutputFile"));
                 tp.setCharacterSet(document.getString("characterSet"));

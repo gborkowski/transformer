@@ -16,10 +16,6 @@ public class TransformerProperties {
 
     private String transformOutputDirectory = "";
 
-    private String fieldMapFile = "";
-
-    private String rowMapFile = "";
-
     private String importInputFile = "";
 
     private String importOutputFile = "";
@@ -112,22 +108,6 @@ public class TransformerProperties {
 
     public void setTransformOutputDirectory(String transformOutputDirectory) {
         this.transformOutputDirectory = transformOutputDirectory;
-    }
-
-    public String getFieldMapFile() {
-        return this.fieldMapFile;
-    }
-
-    public void setFieldMapFile(String fieldMapFile) {
-        this.fieldMapFile = fieldMapFile;
-    }
-
-    public String getRowMapFile() {
-        return this.rowMapFile;
-    }
-
-    public void setRowMapFile(String rowMapFile) {
-        this.rowMapFile = rowMapFile;
     }
 
     public String getImportInputFile() {

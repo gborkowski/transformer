@@ -195,6 +195,10 @@ public class OutputConnect {
         Collection<JsonObject> srcCollection = variantMap.get(pid);
         List<JsonObject> matching = new ArrayList<JsonObject>(srcCollection);
 
+        if (matching.size() > 500) {
+            LOG.warn("handleVariants: large number of variants for this pid: " + pid + ", count: " + matching.size());
+        }
+
         // if yes, create <variants>
         if (matching.size() > 0) {
             Element variantsElement = doc.createElement("variants");

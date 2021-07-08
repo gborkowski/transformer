@@ -239,39 +239,45 @@ public class Processors {
         String firstDelimiter,
         String secondDelimiter) {
 
-        /*
         ArrayList<String> topAttributes = new ArrayList<String>();
+        topAttributes.add("Werks_Nr_");
         topAttributes.add("Typ");
-        topAttributes.add("Gewicht");
-        topAttributes.add("Au");
-        topAttributes.add("führung");
+        topAttributes.add("Ausfuhrung");
+        topAttributes.add("d1");
+        topAttributes.add("Lange");
         topAttributes.add("Profil");
-        topAttributes.add("Länge");
-        topAttributes.add("Länge L");
-        topAttributes.add("Zähnezahl");
+        topAttributes.add("Farbe");
+        topAttributes.add("Lange_L");
+        topAttributes.add("Zahnezahl");
         topAttributes.add("Teilung");
         topAttributes.add("Breite");
-        topAttributes.add("Außen-Ø D");
-        topAttributes.add("Breite B");
-        topAttributes.add("Innen-Ø d");
+        topAttributes.add("Gro_e");
+        topAttributes.add("s");
+        topAttributes.add("Au_en___D");
+        topAttributes.add("Breite_B");
+        topAttributes.add("k");
+        topAttributes.add("Innen___d");
+        topAttributes.add("d2");
         topAttributes.add("Paket");
-        topAttributes.add("amtlänge");
+        topAttributes.add("Gesamtlange");
+        topAttributes.add("Innen__");
         topAttributes.add("Gewinde");
-        topAttributes.add("Innen-Ø");
-        topAttributes.add("Betrieb");
-        topAttributes.add("druck PN");
-        topAttributes.add("chlu");
-        topAttributes.add("Stärke");
-        topAttributes.add("Farbe");
-        topAttributes.add("Nennweite DN");
+        topAttributes.add("dK");
+        topAttributes.add("L");
+        topAttributes.add("Betriebsdruck_PN");
+        topAttributes.add("b");
+        topAttributes.add("Starke");
+        topAttributes.add("B");
+        topAttributes.add("D");
+        topAttributes.add("SW");
+        topAttributes.add("Nennweite_DN");
         topAttributes.add("Material");
-        topAttributes.add("Anzahl Rippen");
-        topAttributes.add("Spirallänge");
-        topAttributes.add("Außen-Ø");
-        topAttributes.add("tärke");
-        topAttributes.add("Kettentyp");
-        topAttributes.add("Antrieb");
-        */
+        topAttributes.add("t");
+        topAttributes.add("e");
+        topAttributes.add("L1");
+        topAttributes.add("d3");
+        topAttributes.add("Anzahl_Rippen");
+        topAttributes.add("Spirallange");
 
         /*
         * Specific to Haberkorn
@@ -305,11 +311,14 @@ public class Processors {
                         String name = StringUtils.stripAccents(sa_name_split[y]);
 
                         /* have to clean up attribute names */
-                        if (!validateLabel(name)) {
+                        name = name.trim();
+                        String nameBefore = name;
+                        if (name != null && name.length() > 0 && !validateLabel(name)) {
                             name = name.replaceAll("[^a-zA-Z0-9_]", "_");
                             if (!Character.isLetter(name.charAt(0))) {
-                                name = "a" + name; // quick fix
+                                name = "a" + name; // quick fix - makes it valid - won't lose data
                             }
+                            LOG.debug("MultiAttribute: had to fix this attribute name(before / after): " + nameBefore + " / " + name);
                         }
                         LOG.debug("y: " + y);
                         LOG.debug("name: " + name);
@@ -324,12 +333,13 @@ public class Processors {
                             }
                         }
 
+                        /* only taking the top 40 or so attributes */
                         if (name != null && value != null && !"".equals(name)) {
                             LOG.debug("MultiAttribute: name: " + name + ", value: " + value);
                             attribute.addAttributeToJson(dataObj, name, value, targetEntity);
                         }
                     } else {
-                        LOG.warn("MultiAttribute: sa_name_split null (not enough array values): " + sa_name_split);
+                        LOG.debug("MultiAttribute: sa_name_split null (not enough array values): " + sa_name_split);
                     }
                     //}
                 }
@@ -362,13 +372,13 @@ public class Processors {
         // check alphanumeric
         boolean isAlpha = label.matches("^[a-zA-Z0-9_]*$");
         if (!isAlpha) {
-            LOG.error("validateLabel: invalid - remove special characters, spaces, etc: " + label);
+            LOG.debug("validateLabel: invalid - remove special characters, spaces, etc: " + label);
             return false;
         }
 
         // check starts with a letter
         if (!Character.isLetter(label.charAt(0))) {
-            LOG.error("validateLabel: invalid - must start with a letter: " + label);
+            LOG.debug("validateLabel: invalid - must start with a letter: " + label);
             return false;
         }
 

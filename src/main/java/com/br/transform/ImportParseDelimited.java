@@ -42,11 +42,18 @@ public class ImportParseDelimited {
         System.out.println();
 
         Path myPath = Paths.get(cInputFile);
-
         try (BufferedReader br = Files.newBufferedReader(myPath, Charset.forName(cCharacterSet))) {
             LOG.info("Setting up...");
+
+            char separator = ' ';
+            if ("\t".equals(cFieldSeparator) || "TAB".equals(cFieldSeparator)) {
+                separator = '\t';
+            } else {
+                separator = cFieldSeparator.charAt(0);
+            }
+
             CSVParser parser = new CSVParserBuilder()
-                .withSeparator(cFieldSeparator.charAt(0))
+                .withSeparator(separator)
                 .withQuoteChar('\"')
                 .withIgnoreLeadingWhiteSpace(true)
                 .build();

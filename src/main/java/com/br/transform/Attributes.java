@@ -88,6 +88,7 @@ public class Attributes {
     /***********************************************/
 
     public void addAttributeToJson(JsonObject dataObj, String attributeName, String attributeValue, String targetEntity) {
+
         /* values for new attribute */
         AttributeItem ai = new AttributeItem();
         ai.setName(attributeName);
