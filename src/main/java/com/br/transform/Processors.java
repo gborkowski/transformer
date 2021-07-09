@@ -83,6 +83,14 @@ public class Processors {
         String positionA = config.getPositionA();
         String positionB = config.getPositionB();
 
+        String realDelimiter = delimiter;
+        if ("PIPE".equals(delimiter)) {
+            realDelimiter = "\\|";
+        }
+        if ("TAB".equals(delimiter)) {
+            realDelimiter = "\\t";
+        }
+
         JsonElement fieldData = dataObj.get(sourceLabel);
         String toBeSplit = "";
         if ("String".equals(sourceDatatype)) {
@@ -91,7 +99,7 @@ public class Processors {
             toBeSplit = fieldData.getAsString();
 
             /* split into array */
-            String[] arr = toBeSplit.split(delimiter);
+            String[] arr = toBeSplit.split(realDelimiter);
             int sizeOfArr = arr.length;
 
             if (posA + 1 > sizeOfArr - 1 || posB + 1 > sizeOfArr) {
@@ -195,14 +203,28 @@ public class Processors {
         * secondDelimiter=:
         */
         LOG.debug("MultiAttribute: pattern 1");
+        String real1stDelimiter = firstDelimiter;
+        if ("PIPE".equals(firstDelimiter)) {
+            real1stDelimiter = "\\|";
+        }
+        if ("TAB".equals(firstDelimiter)) {
+            real1stDelimiter = "\\t";
+        }
+        String real2ndDelimiter = secondDelimiter;
+        if ("PIPE".equals(secondDelimiter)) {
+            real2ndDelimiter = "\\|";
+        }
+        if ("TAB".equals(secondDelimiter)) {
+            real2ndDelimiter = "\\t";
+        }
 
-        String[] entities = in.split(firstDelimiter);
+        String[] entities = in.split(real1stDelimiter);
         int sizeOfEntityArr = entities.length;
 
         for (int x = 0; x < sizeOfEntityArr; x++) {
             LOG.debug("MultiAttribute: entities[" + x + "]" + entities[x]);
 
-            String[] pairs = entities[x].split(secondDelimiter);
+            String[] pairs = entities[x].split(real2ndDelimiter);
             if (pairs.length == 2) {
                 String name = pairs[0];
 
@@ -287,23 +309,42 @@ public class Processors {
         * result: attribute A=BC, R=DG, X=UK
         */
         LOG.debug("MultiAttribute: pattern 2: " + in);
+        String real1stDelimiter = firstDelimiter;
+        if ("PIPE".equals(firstDelimiter)) {
+            real1stDelimiter = "\\|";
+        }
+        if ("TAB".equals(firstDelimiter)) {
+            real1stDelimiter = "\\t";
+        }
+        String real2ndDelimiter = secondDelimiter;
+        if ("PIPE".equals(secondDelimiter)) {
+            real2ndDelimiter = "\\|";
+        }
+        if ("TAB".equals(secondDelimiter)) {
+            real2ndDelimiter = "\\t";
+        }
 
-        String[] entities = in.split(firstDelimiter, 3);
+        String[] entities = in.split(real1stDelimiter, 3);
         int sizeOfEntityArr = entities.length;
 
         if (sizeOfEntityArr == 3) {
-            int count0 = StringUtils.countMatches(entities[0], secondDelimiter);
-            int count1 = StringUtils.countMatches(entities[1], secondDelimiter);
-            int count2 = StringUtils.countMatches(entities[2], secondDelimiter);
+            int count0 = StringUtils.countMatches(entities[0], real2ndDelimiter);
+            int count1 = StringUtils.countMatches(entities[1], real2ndDelimiter);
+            int count2 = StringUtils.countMatches(entities[2], real2ndDelimiter);
 
             LOG.debug("entities[0]: " + entities[0]);
             LOG.debug("entities[1]: " + entities[1]);
             LOG.debug("entities[2]: " + entities[2]);
+            LOG.debug("secondDelimiter: >" + secondDelimiter + "<");
+            LOG.debug("real2ndDelimiter: >" + real2ndDelimiter + "<");
 
             if (count0 == count1 && count1 == count2) {
-                String[] sa_name_split = entities[0].split(secondDelimiter, -1);
-                String[] sa_value_split = entities[1].split(secondDelimiter, -1); // -1 allows nulls - need this
-                String[] sa_uom_split = entities[2].split(secondDelimiter, -1); // -1 allows nulls - need this
+                String[] sa_name_split = entities[0].split(real2ndDelimiter, -1);
+                String[] sa_value_split = entities[1].split(real2ndDelimiter, -1); // -1 allows nulls - need this
+                String[] sa_uom_split = entities[2].split(real2ndDelimiter, -1); // -1 allows nulls - need this
+                LOG.debug("sa_name_split.length: " + sa_name_split.length);
+                LOG.debug("sa_value_split.length: " + sa_value_split.length);
+                LOG.debug("sa_uom_split.length: " + sa_uom_split.length);
 
                 for (int y = 0; y < sa_name_split.length; y++) {
                     //if (topAttributes.contains(sa_name_split[y])) {
@@ -322,9 +363,6 @@ public class Processors {
                         }
                         LOG.debug("y: " + y);
                         LOG.debug("name: " + name);
-                        LOG.debug("sa_name_split.length: " + sa_name_split.length);
-                        LOG.debug("sa_value_split.length: " + sa_value_split.length);
-                        LOG.debug("sa_uom_split.length: " + sa_uom_split.length);
                         String value = "";
                         if (sa_value_split.length > y) {
                             value = sa_value_split[y];
@@ -451,11 +489,32 @@ public class Processors {
         /*
         * Assumes input that looks like: “Mens:101>Clothes:102>Shirts:201,Mens:101>Clothes:102>Summer:301”
         */
+        String real1stDelimiter = firstDelimiter;
+        if ("PIPE".equals(firstDelimiter)) {
+            real1stDelimiter = "\\|";
+        }
+        if ("TAB".equals(firstDelimiter)) {
+            real1stDelimiter = "\\t";
+        }
+        String real2ndDelimiter = secondDelimiter;
+        if ("PIPE".equals(secondDelimiter)) {
+            real2ndDelimiter = "\\|";
+        }
+        if ("TAB".equals(secondDelimiter)) {
+            real2ndDelimiter = "\\t";
+        }
+        String real3rdDelimiter = thirdDelimiter;
+        if ("PIPE".equals(thirdDelimiter)) {
+            real3rdDelimiter = "\\|";
+        }
+        if ("TAB".equals(thirdDelimiter)) {
+            real3rdDelimiter = "\\t";
+        }
 
         // Loop for each category
         LOG.debug("categoryPathsPattern1: in: " + in);
         List<JsonArray> fullCategoryList = new ArrayList<JsonArray>();
-        String[] categories = in.split(firstDelimiter);
+        String[] categories = in.split(real1stDelimiter);
         int sizeOfCategoryArr = categories.length;
 
         for (int catIndex = 0; catIndex < sizeOfCategoryArr; catIndex++) {
@@ -463,14 +522,14 @@ public class Processors {
 
             // Loop for each entity within each category
             List<CategoryItem> categoryList = new ArrayList<CategoryItem>();
-            String[] entities = categories[catIndex].split(secondDelimiter);
+            String[] entities = categories[catIndex].split(real2ndDelimiter);
             int sizeOfEntityArr = entities.length;
 
             // parse string to construct and array of CategoryItems
             for (int entityIndex = 0; entityIndex < sizeOfEntityArr; entityIndex++) {
                 LOG.debug("categoryPathsPattern1: entities[" + entityIndex + "]" + entities[entityIndex]);
 
-                String[] pairs = entities[entityIndex].split(thirdDelimiter);
+                String[] pairs = entities[entityIndex].split(real3rdDelimiter);
                 if (pairs.length == 2) {
                     String name = pairs[0];
                     String id = pairs[1];
@@ -514,17 +573,38 @@ public class Processors {
         * secondDelimiter=,
         * thirdDelimiter=>
         */
+        String real1stDelimiter = firstDelimiter;
+        if ("PIPE".equals(firstDelimiter)) {
+            real1stDelimiter = "\\|";
+        }
+        if ("TAB".equals(firstDelimiter)) {
+            real1stDelimiter = "\\t";
+        }
+        String real2ndDelimiter = secondDelimiter;
+        if ("PIPE".equals(secondDelimiter)) {
+            real2ndDelimiter = "\\|";
+        }
+        if ("TAB".equals(secondDelimiter)) {
+            real2ndDelimiter = "\\t";
+        }
+        String real3rdDelimiter = thirdDelimiter;
+        if ("PIPE".equals(thirdDelimiter)) {
+            real3rdDelimiter = "\\|";
+        }
+        if ("TAB".equals(thirdDelimiter)) {
+            real3rdDelimiter = "\\t";
+        }
 
         // Split with firstDelimiter to separate names and ID's
         List<JsonArray> fullCategoryList = new ArrayList<JsonArray>();
         LOG.debug("categoryPathsPattern2: in: " + in);
-        String[] namesAndIds = in.split(firstDelimiter);
+        String[] namesAndIds = in.split(real1stDelimiter);
         String names = namesAndIds[0];
         String ids = namesAndIds[1];
 
         // split names and ids into arrays
-        String[] nameArray = names.split(secondDelimiter);
-        String[] idArray = ids.split(secondDelimiter);
+        String[] nameArray = names.split(real2ndDelimiter);
+        String[] idArray = ids.split(real2ndDelimiter);
 
         // test they're the same length
         int sizeOfNameArr = nameArray.length;
@@ -540,7 +620,7 @@ public class Processors {
             // part one of populating the graph (add lists of category items - names only)
             for (int nameIndex = 0; nameIndex < sizeOfNameArr; nameIndex++) {
                 LOG.debug("categoryPathsPattern2: nameArray[" + nameIndex + "]" + nameArray[nameIndex]);
-                String[] nameItemArray = nameArray[nameIndex].split(thirdDelimiter);
+                String[] nameItemArray = nameArray[nameIndex].split(real3rdDelimiter);
                 int sizeOfNameItemArr = nameItemArray.length;
 
                 ArrayList<CategoryItem> nameItems = new ArrayList<>(sizeOfNameItemArr);
@@ -555,7 +635,7 @@ public class Processors {
             // part two, set the id for appropriate category items
             for (int idIndex = 0; idIndex < sizeOfNameArr; idIndex++) {
                 LOG.debug("categoryPathsPattern2: idArray[" + idIndex + "]" + idArray[idIndex]);
-                String[] idItemArray = idArray[idIndex].split(thirdDelimiter);
+                String[] idItemArray = idArray[idIndex].split(real3rdDelimiter);
                 int sizeOfIdItemArr = idItemArray.length;
 
                 // these exist from previous loop
@@ -615,7 +695,8 @@ public class Processors {
             }
         }
 
-        return in.replaceAll(from, to);
+        String out = in.replaceAll(from, to);
+        return out;
     }
     /***********************************************/
 

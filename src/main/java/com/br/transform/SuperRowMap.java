@@ -25,7 +25,11 @@ public class SuperRowMap {
     }
 
     public void setFilterProcessors(ArrayList<RowFilterConfig> filterProcessors) {
-        this.filterProcessors = filterProcessors;
+        if (filterProcessors == null) {
+            this.filterProcessors = new ArrayList<RowFilterConfig>();
+        } else {
+            this.filterProcessors = filterProcessors;
+        }
     }
 
     public ArrayList<RowSplitConfig> getSplitProcessors() {
@@ -33,7 +37,11 @@ public class SuperRowMap {
     }
 
     public void setSplitProcessors(ArrayList<RowSplitConfig> splitProcessors) {
-        this.splitProcessors = splitProcessors;
+        if (splitProcessors == null) {
+            this.splitProcessors = new ArrayList<RowSplitConfig>();
+        } else {
+            this.splitProcessors = splitProcessors;
+        }
     }
 
     public ArrayList<RowMergeConfig> getMergeProcessors() {
@@ -41,6 +49,10 @@ public class SuperRowMap {
     }
 
     public void setMergeProcessors(ArrayList<RowMergeConfig> mergeProcessors) {
-        this.mergeProcessors = mergeProcessors;
+        if (mergeProcessors == null) {
+            this.mergeProcessors = new ArrayList<RowMergeConfig>();
+        } else {
+            this.mergeProcessors = mergeProcessors;
+        }
     }
 }

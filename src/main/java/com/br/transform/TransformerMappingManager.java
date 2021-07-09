@@ -207,12 +207,12 @@ public class TransformerMappingManager {
                     docId = document.getId();
                 }
                 LOG.info("getRowMapFromDB: found docId: " + docId);
-                DocumentReference existingDoc = db.collection("customerFieldMaps").document(docId);
+                DocumentReference existingDoc = db.collection("customerRowMaps").document(docId);
 
                 // get existing data
                 ApiFuture<DocumentSnapshot> future = existingDoc.get();
                 DocumentSnapshot currentDoc = future.get();
-                SuperRowMap srm = currentDoc.toObject(SuperRowMap.class);
+                SuperRowMap srm = currentDoc.toObject(SuperRowMap.class); // null
                 return srm;
             } else {
                 LOG.info("getRowMapFromDB: No row map found.");

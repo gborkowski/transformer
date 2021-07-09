@@ -1,5 +1,6 @@
 package com.br.transform;
 
+import com.google.cloud.firestore.Firestore;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
@@ -24,6 +25,9 @@ import org.apache.logging.log4j.Logger;
 
 public class TransformPhase {
     private static final Logger LOG = LogManager.getLogger(TransformPhase.class);
+
+    /* Firestore DB */
+    private Firestore firestoreDB;
 
     /* some settings to store globally */
     private boolean configuredProductAttributes;
@@ -87,6 +91,13 @@ public class TransformPhase {
         this.fieldMap = fieldMap;
     }
 
+    public Firestore getFirestoreDB() {
+        return firestoreDB;
+    }
+
+    public void setFirestoreDB(Firestore firestoreDB) {
+        this.firestoreDB = firestoreDB;
+    }
     public static void main(String[] args) {
 
         if (args.length == 0) {
@@ -102,18 +113,30 @@ public class TransformPhase {
         TransformerPropertiesManager tpm = new TransformerPropertiesManager();
         tpm.setCustomerName(args[0]);
         TransformerProperties tp = tpm.getTransformerProperties();
+        transformPhase.setFirestoreDB(tpm.getFirestoreDB());
 
         /* Getting Row and Field maps */
         TransformerMappingManager tmm = new TransformerMappingManager();
         tmm.setCustomerName(args[0]);
+        tmm.setFirestoreDB(transformPhase.getFirestoreDB());
         RowMap rm = new RowMap();
         SuperRowMap srm = tmm.getRowMapFromDB();
-        rm.setFilterProcessors(srm.getFilterProcessors());
-        rm.setSplitProcessors(srm.getSplitProcessors());
-        rm.setMergeProcessors(srm.getMergeProcessors());
-        transformPhase.setRowMap(rm);
+        if (srm != null) {
+            rm.setFilterProcessors(srm.getFilterProcessors());
+            rm.setSplitProcessors(srm.getSplitProcessors());
+            rm.setMergeProcessors(srm.getMergeProcessors());
+            transformPhase.setRowMap(rm);
+        } else {
+            LOG.error("Error: Could not load row maps from DB.  srm is null, exiting...");
+            System.exit(0);
+        }
         SuperFieldMap sfm = tmm.getFieldMapFromDB();
-        transformPhase.setFieldMap(sfm.getFieldMaps());
+        if (sfm != null) {
+            transformPhase.setFieldMap(sfm.getFieldMaps());
+        } else {
+            LOG.error("Error: Could not load field maps from DB.  sfm is null, exiting...");
+            System.exit(0);
+        }
 
         /* Individual properties */
         String cMainCustomerDirectory = tp.getMainCustomerDirectory();
@@ -451,6 +474,10 @@ public class TransformPhase {
             }
         } else if ("variant".equals(entity)) {
             JsonElement jeSkuId = dataObj.get("sku_id");
+            if (jeSkuId == null) {
+                LOG.error("objectExistsInList: looking for sku_id in variant object, but it's not found.  Verify sku_id is mapped to variant (not product).");
+                return true;
+            }
             String skuId = jeSkuId.getAsString();
 
             for (String itemInList : skuIdList) {

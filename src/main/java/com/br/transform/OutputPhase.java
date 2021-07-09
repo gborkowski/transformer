@@ -1,11 +1,22 @@
 package com.br.transform;
 
+import com.google.cloud.firestore.Firestore;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 public class OutputPhase {
     private static final Logger LOG = LogManager.getLogger(OutputPhase.class);
 
+    /* Firestore DB */
+    private Firestore firestoreDB;
+
+    public Firestore getFirestoreDB() {
+        return firestoreDB;
+    }
+
+    public void setFirestoreDB(Firestore firestoreDB) {
+        this.firestoreDB = firestoreDB;
+    }
     public static void main(String[] args) {
 
         if (args.length == 0) {
@@ -22,6 +33,7 @@ public class OutputPhase {
         TransformerPropertiesManager tpm = new TransformerPropertiesManager();
         tpm.setCustomerName(args[0]);
         TransformerProperties tp = tpm.getTransformerProperties();
+        op.setFirestoreDB(tpm.getFirestoreDB());
 
         /* Individual properties */
         String cMainCustomerDirectory = tp.getMainCustomerDirectory();
