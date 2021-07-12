@@ -340,7 +340,6 @@ public class TransformPhase {
         ArrayList<String> reserved = new ArrayList<String>();
         reserved.add("op");
         reserved.add("path");
-        reserved.add("views");
         reserved.add("variants");
         reserved.add("attributes");
 
