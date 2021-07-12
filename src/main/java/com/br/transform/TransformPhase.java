@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Writer;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -178,7 +179,7 @@ public class TransformPhase {
         }
 
         /* perform analysis on products / variants --> output file */
-        transformPhase.performAnalysis(cHasVariants.booleanValue(), analysisDirectory);
+        transformPhase.performAnalysis(cCustomerName, cHasVariants.booleanValue(), analysisDirectory);
 
         LOG.info("Total Time Taken : " + (System.currentTimeMillis() - startTotal) / 1000 + " secs");
     }
@@ -407,6 +408,7 @@ public class TransformPhase {
 
                 if (postRowRules != null) {
                     /* process field rules */
+                    LOG.debug("processJson: postRowRules: " + postRowRules);
                     JsonObject[] postFieldRules = processFieldRules(cCustomerName, postRowRules);
 
                     /* Check to see if product already exists - don't add if it does */
@@ -635,12 +637,17 @@ public class TransformPhase {
         if ("product".equals(targetEntity)) {
             if (getConfiguredProductAttributes()) {
                 /* run String rules */
+                if (null == fieldData) {
+                    LOG.debug("fieldRulesAttribute: nothing found for product attribute (just that data wasn't provided): " + targetLabel);
+                    return;
+                }
                 String fixed = processStringRules(fm, fieldData.getAsString(), procs, product);
 
                 /* had to do this to allow for non-string attributes */
-                /* if this is configured with multi, the attributes have already been added */
-                if (!hasMultiAttributeProcessor(fm)) {
+                /* if this is configured with multi (or CategoryPaths), the attributes have already been added */
+                if (!hasMultiAttributeProcessor(fm) && !hasCategoryPathsProcessor(fm)) {
                     /* add as single attribute */
+                    LOG.debug("fieldRulesAttribute: adding as attribute");
                     getAttributes().addAttributeToJson(product, targetLabel, fixed, targetEntity);
                 }
             } else {
@@ -649,6 +656,10 @@ public class TransformPhase {
         } else if ("variant".equals(targetEntity)) {
             if (getConfiguredVariantAttributes()) {
                 /* run String rules */
+                if (null == fieldData) {
+                    LOG.debug("fieldRulesAttribute: nothing found for variant attribute (just that data wasn't provided): " + targetLabel);
+                    return;
+                }
                 String fixed = processStringRules(fm, fieldData.getAsString(), procs, variant);
 
                 /* had to do this to allow for non-string attributes */
@@ -663,6 +674,20 @@ public class TransformPhase {
         } else {
             LOG.error("Unsupported entity type: " + targetLabel);
         }
+    }
+
+    /***********************************************/
+
+    public boolean hasCategoryPathsProcessor(FieldMap fm) {
+        Iterator<ProcessorConfig> fieldProcessorIter = fm.getProcessors().iterator();
+        while (fieldProcessorIter.hasNext()) {
+            ProcessorConfig processorConfig = fieldProcessorIter.next();
+
+            if ("CategoryPaths".equals(processorConfig.getName())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /***********************************************/
@@ -825,13 +850,35 @@ public class TransformPhase {
 
     /***********************************************/
 
-    public void performAnalysis(boolean hasVariants, String analysisDirectory) {
+    public void performAnalysis(String cCustomerName, boolean hasVariants, String analysisDirectory) {
         LOG.info("Starting analysis...");
+
+        /* setup results manager */
+        TransformerResultsManager trm = new TransformerResultsManager();
+        trm.setCustomerName(cCustomerName);
+        trm.setFirestoreDB(getFirestoreDB());
+
+        /* create results object */
+        SuperResults sr = new SuperResults();
+        sr.setCustomerName(cCustomerName);
+
         LOG.info("Total unique products: " + productList.size());
+        sr.setTotalProducts(Long.valueOf(productList.size()));
 
         /* dump this out to tab delimited file so people can review in excel */
         LOG.info("Unique product attributes added: " + getAttributes().getProductAttributeList().size());
+        sr.setTotalUniqueProductAttributes(Long.valueOf(getAttributes().getProductAttributeList().size()));
+
         if (getAttributes().getProductAttributeList().size() > 0) {
+
+            /* sorting variant attributes by count */
+            List<String> sortedProductList = new ArrayList<String>();
+            getAttributes().getProductAttributeList().entrySet()
+                .stream()
+                .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
+                .forEachOrdered(x -> sortedProductList.add(x.getKey() + " --> " + x.getValue()));
+            sr.setTop50ProductAttributes(sortedProductList);
+
             try {
                 FileWriter writer = new FileWriter(analysisDirectory + "uniqueProductAttributes.txt");
                 for (Map.Entry<String, Integer> item: getAttributes().getProductAttributeList().entrySet()) {
@@ -844,6 +891,7 @@ public class TransformPhase {
         }
 
         LOG.info("Unique product attribute values added: " + getAttributes().getProductAttributeValueList().size());
+
         if (getAttributes().getProductAttributeValueList().size() > 0) {
             try {
                 FileWriter writer = new FileWriter(analysisDirectory + "uniqueProductAttributeValues.txt");
@@ -856,14 +904,24 @@ public class TransformPhase {
             }
         }
 
-        // top X attributes (sort by value - highest first)
-
         if (hasVariants) {
             LOG.info("Total unique variants: " + variantList.size());
+            sr.setTotalVariants(Long.valueOf(variantList.size()));
 
             /* dump this out to tab delimited file so people can review in excel */
             LOG.info("Unique variant attributes added: " + getAttributes().getVariantAttributeList().size());
+            sr.setTotalUniqueVariantAttributes(Long.valueOf(getAttributes().getVariantAttributeList().size()));
+
             if (getAttributes().getVariantAttributeList().size() > 0) {
+
+                /* sorting variant attributes by count */
+                List<String> sortedVariantList = new ArrayList<String>();
+                getAttributes().getVariantAttributeList().entrySet()
+                    .stream()
+                    .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
+                    .forEachOrdered(x -> sortedVariantList.add(x.getKey() + " --> " + x.getValue()));
+                sr.setTop50VariantAttributes(sortedVariantList);
+
                 try {
                     FileWriter writer = new FileWriter(analysisDirectory + "uniqueVariantAttributes.txt");
                     for (Map.Entry<String, Integer> item: getAttributes().getVariantAttributeList().entrySet()) {
@@ -887,13 +945,11 @@ public class TransformPhase {
                     LOG.error("performAnalysis: " + e);
                 }
             }
-
-            // top X attributes (sort by value - highest first)
-            // loop to find max number of variants for a product
-            // loop to find number of products with more than 300 variants
-            // loop to find number of products with more than 500 variants
-            // loop to find number of products with more than 1000 variants
         }
+
+        // update DB with results
+        trm.writeResultsToDB(sr);
+
         LOG.info("Analysis complete...");
     }
 }

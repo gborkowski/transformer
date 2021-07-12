@@ -60,8 +60,6 @@ public class Processors {
             } else if ("endsWith".equals(operation) && preRules.endsWith(testValue)) {
                 // match - we should filter this out, so return null
                 return null;
-            } else {
-                LOG.error("FilterRow, operation not supported: " + operation);
             }
         } else {
             LOG.error("FilterRow, sourceDatatype not supported: " + sourceDatatype);
@@ -136,13 +134,25 @@ public class Processors {
         JsonElement fieldDataB = dataObj.get(sourceLabelB);
 
         if ("String".equals(sourceDatatypeA) && "String".equals(sourceDatatypeB)) {
-            String stringA = fieldDataA.getAsString();
-            String stringB = fieldDataB.getAsString();
-
-            String merged = stringA + delimiter + stringB;
-
-            /* add merged property to object */
-            dataObj.addProperty(targetLabel, merged);
+            if (fieldDataA != null && fieldDataB != null) {
+                String stringA = fieldDataA.getAsString();
+                String stringB = fieldDataB.getAsString();
+                String merged = stringA + delimiter + stringB;
+                dataObj.addProperty(targetLabel, merged);
+                LOG.debug("mergeRow: A & B: " + merged);
+            } else if (fieldDataA != null) {
+                String stringA = fieldDataA.getAsString();
+                String merged = stringA;
+                dataObj.addProperty(targetLabel, merged);
+                LOG.debug("mergeRow: A only: " + merged);
+            } else if (fieldDataB != null) {
+                String stringB = fieldDataB.getAsString();
+                String merged = stringB;
+                dataObj.addProperty(targetLabel, merged);
+                LOG.debug("mergeRow: B only: " + merged);
+            } else {
+                LOG.warn("mergeRow: both sourceA and B are null - not adding target to dataObj");
+            }
         } else {
             LOG.error("MergeRow, sourceDatatype not supported: " + sourceDatatypeA + ", " + sourceDatatypeB);
         }
@@ -642,7 +652,7 @@ public class Processors {
                 ArrayList<CategoryItem> nameItems = graph.get(idIndex);
                 for (int idItemIndex = 0; idItemIndex < sizeOfIdItemArr; idItemIndex++) {
                     // updating id for every name
-                    nameItems.get(idItemIndex).setId(idItemArray[idItemIndex]);
+                    nameItems.get(idItemIndex).setId(toUpperCase(makeAlphaNumeric(idItemArray[idItemIndex])));
                 }
             }
 

@@ -85,6 +85,10 @@ public class ImportParseXML {
         return variantList;
     }
 
+    public void setVariantList(List<Map<String, String>> variantList) {
+        this.variantList = variantList;
+    }
+
     public void processXML(
         String cFileType,
         String cInputFile,
@@ -203,7 +207,10 @@ public class ImportParseXML {
                 if (tempNode.getNodeName().equals(cVariantXMLEntity)) {
 
                     /* add this variant to variantList - DOES this need to be cloned? */
-                    getVariantList().add((HashMap<String, String>) variantInfo);
+                    List<Map<String, String>> varList = new ArrayList<Map<String, String>>();
+                    varList = getVariantList();
+                    varList.add((HashMap<String, String>) variantInfo);
+                    setVariantList(varList);
                     variantInfo.clear();
                 }
 

@@ -8,7 +8,6 @@ import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.Query;
 import com.google.cloud.firestore.QueryDocumentSnapshot;
 import com.google.cloud.firestore.QuerySnapshot;
-import com.google.cloud.firestore.SetOptions;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -87,7 +86,8 @@ public class TransformerMappingManager {
                 for (QueryDocumentSnapshot document : documents) {
                     docId = document.getId();
                 }
-                LOG.info("writeFieldMapToDB: found docId: " + docId);
+                LOG.info("writeFieldMapToDB: found docId (not updating): " + docId);
+                /*
                 DocumentReference existingDoc = db.collection("customerFieldMaps").document(docId);
 
                 // get existing data
@@ -105,6 +105,7 @@ public class TransformerMappingManager {
                 // write to DB
                 existingDoc.set(docData, SetOptions.merge());
                 LOG.info("writeFieldMapToDB: updated DB (result)");
+                */
             }
 
         } catch (InterruptedException | ExecutionException e) {

@@ -136,17 +136,19 @@ public class Attributes {
 
             /* create as new JsonElement */
             List<JsonElement> attrList = new ArrayList<JsonElement>();
-            attrList.add(categoryPaths);
 
             Gson gson = new GsonBuilder().create();
             JsonElement newAttribute = gson.toJsonTree(categoryPaths);
+            JsonObject catPathsObj = new JsonObject();
+            catPathsObj.add("category_paths", newAttribute);
+            attrList.add(catPathsObj);
             JsonElement newAttributeList = gson.toJsonTree(attrList, ArrayList.class);
 
             // test if dataObj has property called 'attributes'
             if (dataObj.has("attributes")) {
                 LOG.debug("addCategoryPathsToJson: Attributes exist, adding category_paths to it");
                 JsonArray existing = dataObj.getAsJsonArray("attributes");
-                existing.add(newAttribute);
+                existing.add(catPathsObj);
             } else {
                 LOG.debug("addCategoryPathsToJson: Creating attributes - did not exist before");
                 dataObj.add("attributes", newAttributeList.getAsJsonArray());

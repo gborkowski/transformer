@@ -175,7 +175,7 @@ public class OutputDataConnect {
 
                 // for dataConnect, have to format things in certain way
                 JsonObject dcFormat = convertTransformedProductToDataConnectFormat(jsonObj, hasVariants);
-
+                LOG.debug("dcFormat: " + dcFormat);
                 // write opening curly bracket
                 writer.beginObject();
 
@@ -255,10 +255,17 @@ public class OutputDataConnect {
                 while (it2.hasNext()) {
                     JsonElement jeAttribute = it2.next();
                     AttributeItem ai = gson.fromJson(jeAttribute, AttributeItem.class);
-                    LOG.debug("convertTransformedProductToDataConnectFormat: AttributeItem: " + ai.getName() + ", " + ai.getValue());
-
-                    // write attribute property
-                    attributes.addProperty(ai.getName(), ai.getValue());
+                    if (!ai.getName().equals("")) {
+                        LOG.debug("convertTransformedProductToDataConnectFormat: AttributeItem: " + ai.getName() + ", " + ai.getValue());
+                        // write attribute property
+                        attributes.addProperty(ai.getName(), ai.getValue());
+                    } else {
+                        JsonObject whole_category_paths = jeAttribute.getAsJsonObject();
+                        JsonElement cat_paths = whole_category_paths.get("category_paths");
+                        LOG.debug("convertTransformedProductToDataConnectFormat: category_paths: " + cat_paths);
+                        // write attribute property
+                        attributes.add("category_paths", cat_paths);
+                    }
                 }
             } else if (je instanceof JsonObject) {
                 LOG.error("convertTransformedProductToDataConnectFormat: json has a JsonObject - should not have this.");
@@ -418,23 +425,79 @@ public class OutputDataConnect {
         try {
             LOG.debug("handleArray: " + key);
 
+            // special handling for category_paths
+            if ("category_paths".equals(key)) {
+                LOG.debug("handleArray: category_paths: " + ja);
+                handleCategoryPaths(writer, ja, key);
+            } else {
+                // write name, then start array
+                if (key != null && !"".equals(key)) {
+                    writer.name(key);
+                }
+
+                LOG.debug("handleArray: beginning array");
+                writer.beginArray();
+
+                Iterator<JsonElement> it2 = ja.iterator();
+                while (it2.hasNext()) {
+                    JsonElement je = it2.next();
+                    LOG.debug("handleArray: je: " + je);
+                    AttributeItem ai = gson.fromJson(je, AttributeItem.class);
+                    LOG.debug("handleArray: AttributeItem: " + ai.getName() + ", " + ai.getValue());
+
+                    // write each element of array
+                    writer.name(ai.getName()).value(ai.getValue());
+                }
+                writer.endArray();
+            }
+        } catch (IOException e) {
+            LOG.error("handleArray: " + e);
+        }
+    }
+
+    /***********************************************/
+
+    public void handleCategoryPaths(JsonWriter writer, JsonArray ja, String key) {
+        Gson gson = new Gson();
+
+        try {
+            LOG.debug("handleCategoryPaths: " + key);
+
             // write name, then start array
             writer.name(key);
 
-            writer.beginObject();
+            writer.beginArray();
 
-            Iterator<JsonElement> it2 = ja.iterator();
-            while (it2.hasNext()) {
-                JsonElement je = it2.next();
-                AttributeItem ai = gson.fromJson(je, AttributeItem.class);
-                LOG.debug("handleArray: AttributeItem: " + ai.getName() + ", " + ai.getValue());
+            Iterator<JsonElement> outsideIterator = ja.iterator();
+            while (outsideIterator.hasNext()) {
+                JsonElement outsideJE = outsideIterator.next();
+                LOG.debug("handleCategoryPaths: outsideJE: " + outsideJE);
 
-                // write each element of array
-                writer.name(ai.getName()).value(ai.getValue());
+                // we know this is a JsonArray (the inside of the double array)
+                writer.beginArray();
+                Iterator<JsonElement> insideIterator = outsideJE.getAsJsonArray().iterator();
+                while (insideIterator.hasNext()) {
+                    JsonElement insideJE = insideIterator.next();
+                    LOG.debug("handleCategoryPaths: insideJE: " + insideJE);
+
+                    writer.beginObject();
+                    CategoryItem ci = gson.fromJson(insideJE, CategoryItem.class);
+                    LOG.debug("handleCategoryPaths: CategoryItem (name): " + ci.getName());
+                    LOG.debug("handleCategoryPaths: CategoryItem (id): " + ci.getId());
+                    writer.name("name").value(ci.getName());
+                    writer.name("id").value(ci.getId());
+                    LOG.debug("handleCategoryPaths: wrote category items");
+                    writer.endObject();
+                }
+                LOG.debug("handleCategoryPaths: before endArray 1");
+                writer.endArray();
+                LOG.debug("handleCategoryPaths: after endArray 1");
             }
-            writer.endObject();
+            LOG.debug("handleCategoryPaths: before endArray 2");
+            writer.endArray();
+            LOG.debug("handleCategoryPaths: after endArray 2");
         } catch (IOException e) {
-            LOG.error("handleArray: " + e);
+            LOG.error("handleCategoryPaths: " + e);
         }
     }
 
@@ -444,8 +507,11 @@ public class OutputDataConnect {
         LOG.debug("handleObject: " + key);
 
         try {
-            writer.name(key);
+            if (key != null && !"".equals(key)) {
+                writer.name(key);
+            }
 
+            LOG.debug("handleObject: beginning object");
             writer.beginObject();
 
             // handle objects (with children?)
