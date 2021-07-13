@@ -551,7 +551,6 @@ public class TransformPhase {
             String targetEntity = fm.getTargetEntity();
             LOG.debug("Processing field: " + targetLabel + ", for entity: " + targetEntity);
 
-
             if (!"product".equals(targetEntity) && !"variant".equals(targetEntity)) {
                 LOG.warn("processFieldRules: Unsupported targetEntity: " + targetEntity + ", " + targetLabel);
                 LOG.warn("processFieldRules: Defaulting to product");
@@ -630,17 +629,24 @@ public class TransformPhase {
     public void fieldRulesAttribute(FieldMap fm, JsonElement fieldData, Processors procs, JsonObject product, JsonObject variant) {
         String targetLabel = fm.getTargetLabel();
         String targetEntity = fm.getTargetEntity();
+        String defaultValue = fm.getDefaultValue();
+        String valueToUse = "";
 
         LOG.debug("Attribute field processing: " + targetLabel);
 
         if ("product".equals(targetEntity)) {
             if (getConfiguredProductAttributes()) {
                 /* run String rules */
-                if (null == fieldData) {
+                if (null == fieldData && "".equals(defaultValue)) {
                     LOG.debug("fieldRulesAttribute: nothing found for product attribute (just that data wasn't provided): " + targetLabel);
                     return;
+                } else if (null == fieldData) {
+                    valueToUse = defaultValue;
+                } else {
+                    valueToUse = fieldData.getAsString();
                 }
-                String fixed = processStringRules(fm, fieldData.getAsString(), procs, product);
+
+                String fixed = processStringRules(fm, valueToUse, procs, product);
 
                 /* had to do this to allow for non-string attributes */
                 /* if this is configured with multi (or CategoryPaths), the attributes have already been added */
@@ -655,11 +661,16 @@ public class TransformPhase {
         } else if ("variant".equals(targetEntity)) {
             if (getConfiguredVariantAttributes()) {
                 /* run String rules */
-                if (null == fieldData) {
+                if (null == fieldData && "".equals(defaultValue)) {
                     LOG.debug("fieldRulesAttribute: nothing found for variant attribute (just that data wasn't provided): " + targetLabel);
                     return;
+                } else if (null == fieldData) {
+                    valueToUse = defaultValue;
+                } else {
+                    valueToUse = fieldData.getAsString();
                 }
-                String fixed = processStringRules(fm, fieldData.getAsString(), procs, variant);
+
+                String fixed = processStringRules(fm, valueToUse, procs, variant);
 
                 /* had to do this to allow for non-string attributes */
                 /* if this is configured with multi, the attributes have already been added */
@@ -713,13 +724,21 @@ public class TransformPhase {
         JsonObject variant) {
         String targetLabel = fm.getTargetLabel();
         String targetEntity = fm.getTargetEntity();
+        String valueToUse = "";
 
         LOG.debug("No ValueGenerator configured, normal field processing: " + targetLabel);
 
+        /* use default value? */
+        if (fieldData == null) {
+            valueToUse = fm.getDefaultValue();
+        } else {
+            valueToUse = fieldData.getAsString();
+        }
+
         /* must have valid fieldData and targetDataType */
-        if (fieldData != null && fm.getTargetDataType() != null) {
+        if (valueToUse != null && fm.getTargetDataType() != null) {
             try {
-                String preRules = fieldData.getAsString();
+                String preRules = valueToUse;
 
                 if ("String".equals(fm.getTargetDataType())) {
 
@@ -729,11 +748,6 @@ public class TransformPhase {
                         fixed = processStringRules(fm, preRules, procs, product);
                     } else if ("variant".equals(targetEntity)) {
                         fixed = processStringRules(fm, preRules, procs, variant);
-                    }
-
-                    /* use default value? */
-                    if (fixed == null || "".equals(fixed)) {
-                        fixed = fm.getDefaultValue();
                     }
 
                     /* add field to json */
@@ -799,6 +813,11 @@ public class TransformPhase {
         Iterator<ProcessorConfig> fieldProcessorIter = fm.getProcessors().iterator();
         String fixed = preRules;
         String targetEntity = fm.getTargetEntity();
+
+        /* use default value? */
+        if (fixed == null || "".equals(fixed)) {
+            fixed = fm.getDefaultValue();
+        }
 
         while (fieldProcessorIter.hasNext()) {
             ProcessorConfig processorConfig = fieldProcessorIter.next();
