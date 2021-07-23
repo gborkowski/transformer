@@ -87,56 +87,11 @@ public class TransformerMappingManager {
                     docId = document.getId();
                 }
                 LOG.info("writeFieldMapToDB: found docId (not updating): " + docId);
-                /*
-                DocumentReference existingDoc = db.collection("customerFieldMaps").document(docId);
-
-                // get existing data
-                ApiFuture<DocumentSnapshot> future = existingDoc.get();
-                DocumentSnapshot currentDoc = future.get();
-                SuperFieldMap sfm = currentDoc.toObject(SuperFieldMap.class);
-
-                // merge method with new
-                List<FieldMap> newFM = mergeFieldMaps(sfm.getFieldMaps());
-
-                // setup data
-                Map<String, Object> docData = new HashMap<>();
-                docData.put("fieldMaps", newFM);
-
-                // write to DB
-                existingDoc.set(docData, SetOptions.merge());
-                LOG.info("writeFieldMapToDB: updated DB (result)");
-                */
             }
 
         } catch (InterruptedException | ExecutionException e) {
             LOG.error("Error writing mapping info to DB for customer: " + getCustomerName());
         }
-    }
-
-    /***********************************************/
-
-    private List<FieldMap> mergeFieldMaps(List<FieldMap> dbFM) {
-        List<FieldMap> newFM = new ArrayList<FieldMap>();
-
-        // loop around to get to a final version
-        // only add if missing - don't overwrite anything
-        for (FieldMap thisFM : getHeaders()) {
-            String sourceLabel = thisFM.getSourceLabel();
-            boolean found = false;
-
-            for (FieldMap existingFM : dbFM) {
-                String existingSourceLabel = existingFM.getSourceLabel();
-                if (sourceLabel.equals(existingSourceLabel)) {
-                    found = true;
-                    newFM.add(existingFM);
-                }
-            }
-            if (!found) {
-                // add this newFM to headers
-                newFM.add(thisFM);
-            }
-        }
-        return newFM;
     }
 
     /***********************************************/
