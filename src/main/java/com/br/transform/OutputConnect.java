@@ -28,7 +28,6 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
-import org.apache.commons.text.StringEscapeUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.w3c.dom.DOMException;
@@ -191,11 +190,14 @@ public class OutputConnect {
         String pid = jsonObj.get("pid").getAsString();
         LOG.debug("Getting variants for pid: " + pid);
 
+        // this is the MAX number of SKUS we allow per product (skip anything beyond this)
+        int maxSkusPerProduct = 250;
+
         // temp holder for matches
         Collection<JsonObject> srcCollection = variantMap.get(pid);
         List<JsonObject> matching = new ArrayList<JsonObject>(srcCollection);
 
-        if (matching.size() > 500) {
+        if (matching.size() > maxSkusPerProduct) {
             LOG.warn("handleVariants: large number of variants for this pid: " + pid + ", count: " + matching.size());
         }
 
@@ -203,24 +205,28 @@ public class OutputConnect {
         if (matching.size() > 0) {
             Element variantsElement = doc.createElement("variants");
 
+            int limitCounter = 0;
             for (JsonObject var: matching) {
-                Set<String> keys = var.keySet();
-                Iterator<String> it = keys.iterator();
+                if (limitCounter <= maxSkusPerProduct) {
+                    Set<String> keys = var.keySet();
+                    Iterator<String> it = keys.iterator();
 
-                Element variantElement = doc.createElement("variant");
+                    Element variantElement = doc.createElement("variant");
 
-                while (it.hasNext()) {
-                    String key = it.next();
-                    Element elem = doc.createElement(key);
+                    while (it.hasNext()) {
+                        String key = it.next();
+                        Element elem = doc.createElement(key);
 
-                    switchOnElementType(doc, elem, var.get(key), key);
+                        switchOnElementType(doc, elem, var.get(key), key);
 
-                    // add this field (element) tp the product
-                    variantElement.appendChild(elem);
+                        // add this field (element) tp the product
+                        variantElement.appendChild(elem);
+                    }
+
+                    /* add variant to variants element */
+                    variantsElement.appendChild(variantElement);
                 }
-
-                /* add variant to variants element */
-                variantsElement.appendChild(variantElement);
+                limitCounter++;
             }
 
             /* add variants to product */
@@ -262,8 +268,8 @@ public class OutputConnect {
 
             try {
                 // write each element of array
-                Element attr = doc.createElement(StringEscapeUtils.escapeXml11(ai.getName()));
-                attr.appendChild(doc.createTextNode(StringEscapeUtils.escapeXml11(ai.getValue())));
+                Element attr = doc.createElement(ai.getName());
+                attr.appendChild(doc.createTextNode(ai.getValue()));
 
                 // add to elem
                 elem.appendChild(attr);
@@ -284,6 +290,10 @@ public class OutputConnect {
     public void handlePrimitive(Document doc, Element elem, JsonPrimitive jp, String key) {
 
         LOG.debug("handlePrimitive: " + key + ", " + jp.getAsString());
-        elem.appendChild(doc.createTextNode(StringEscapeUtils.escapeXml11(jp.getAsString())));
+
+        // no need to use escapeXml11 because this happens later
+        // leaving this in there double escapes it and is not correct
+
+        elem.appendChild(doc.createTextNode(jp.getAsString()));
     }
 }

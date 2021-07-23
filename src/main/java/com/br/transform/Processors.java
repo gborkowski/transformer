@@ -271,9 +271,11 @@ public class Processors {
         String firstDelimiter,
         String secondDelimiter) {
 
+        /*
         ArrayList<String> topAttributes = new ArrayList<String>();
         topAttributes.add("Werks_Nr_");
         topAttributes.add("Typ");
+        topAttributes.add("Gewicht");
         topAttributes.add("Ausfuhrung");
         topAttributes.add("d1");
         topAttributes.add("Lange");
@@ -310,6 +312,12 @@ public class Processors {
         topAttributes.add("d3");
         topAttributes.add("Anzahl_Rippen");
         topAttributes.add("Spirallange");
+        topAttributes.add("Au_en__");
+        topAttributes.add("Kettentyp");
+        topAttributes.add("Antrieb");
+        topAttributes.add("Bauart");
+        topAttributes.add("A");
+        */
 
         /*
         * Specific to Haberkorn
