@@ -106,7 +106,12 @@ public class ImportPhase {
         } else if ("JSON".equals(cFileType)) {
             ImportParseJson ipj = new ImportParseJson();
             ipj.processJson(cFileType, cInputFile, cOutputFile, cCharacterSet, importPhase.ihi);
+        } else if ("Endeca".equals(cFileType)) {
+            ImportParseEndeca ipe = new ImportParseEndeca();
+            ipe.processEndeca(cFileType, cInputFile, cOutputFile, cCharacterSet, importPhase.ihi);
         }
+
+        LOG.debug("Moving on to write field maps to DB");
 
         // write out fieldMap and rowMap config JSON files
         importPhase.writeMapsToDB(args[0]);
@@ -118,13 +123,17 @@ public class ImportPhase {
 
     public void writeMapsToDB(String customerName) {
 
+        LOG.debug("writeMapsToDB: headers.size(): " + ihi.getHeaders().size());
+
         TransformerMappingManager tmm = new TransformerMappingManager();
         tmm.setCustomerName(customerName);
         tmm.setHeaders(ihi.getHeaders());
 
         // get firestoreDB from earlier
         tmm.setFirestoreDB(getFirestoreDB());
+        LOG.debug("writeMapsToDB: writeFieldMapToDB");
         tmm.writeFieldMapToDB();
+        LOG.debug("writeMapsToDB: writeRowMapToDB");
         tmm.writeRowMapToDB();
     }
 

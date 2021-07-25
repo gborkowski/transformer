@@ -9,6 +9,6 @@ export CLASSPATH=$CLASSPATH:$BASE/transformer-1.0-SNAPSHOT-jar-with-dependencies
 # There is one required argument for each phase:
 # specify the customer you want to use
 
-#java com.br.transform.ImportPhase Haberkorn
-#java com.br.transform.TransformPhase Haberkorn
-java com.br.transform.OutputPhase Haberkorn
+java com.br.transform.ImportPhase Jumbo
+#java com.br.transform.TransformPhase Jumbo
+#java com.br.transform.OutputPhase Jumbo
