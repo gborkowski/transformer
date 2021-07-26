@@ -87,10 +87,16 @@ public class ImportParseEndeca {
                             writer.name(tmp).value(entry.getValue());
                         }
 
-                        numberOfRecords++;
-
                         // write closing curly bracket
                         writer.endObject();
+
+                        // status
+                        numberOfRecords++;
+                        if (numberOfRecords % 1000 == 0) {
+                            LOG.info("records: " + numberOfRecords);
+                        } else {
+                            LOG.debug("records: " + numberOfRecords);
+                        }
                     } else {
                         if (headerNames.containsKey(line[0])) {
                             // get current value
@@ -102,13 +108,6 @@ public class ImportParseEndeca {
                             headerNames.put(line[0], line[1]);
                         }
                     }
-                }
-
-                // status
-                if (numberOfRecords % 1000 == 0) {
-                    LOG.info("records: " + numberOfRecords);
-                } else {
-                    LOG.debug("records: " + numberOfRecords);
                 }
             }
 
