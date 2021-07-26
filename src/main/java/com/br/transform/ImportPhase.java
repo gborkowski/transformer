@@ -109,6 +109,9 @@ public class ImportPhase {
         } else if ("Endeca".equals(cFileType)) {
             ImportParseEndeca ipe = new ImportParseEndeca();
             ipe.processEndeca(cFileType, cInputFile, cOutputFile, cCharacterSet, importPhase.ihi);
+        } else {
+            LOG.error("Filetype for import is incorrect / unknown");
+            System.exit(0);
         }
 
         LOG.debug("Moving on to write field maps to DB");
@@ -131,9 +134,7 @@ public class ImportPhase {
 
         // get firestoreDB from earlier
         tmm.setFirestoreDB(getFirestoreDB());
-        LOG.debug("writeMapsToDB: writeFieldMapToDB");
         tmm.writeFieldMapToDB();
-        LOG.debug("writeMapsToDB: writeRowMapToDB");
         tmm.writeRowMapToDB();
     }
 

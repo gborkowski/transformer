@@ -242,6 +242,8 @@ public class ImportParseXML {
                         LOG.error("handleNodeList(endObject): " + ioe);
                     }
                 }
+            } else {
+                LOG.debug("handleNodeList: Not an element node");
             }
         }
     }
