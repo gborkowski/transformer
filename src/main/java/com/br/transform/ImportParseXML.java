@@ -168,6 +168,7 @@ public class ImportParseXML {
         boolean hasVariants) {
         for (int count = 0; count < nodeList.getLength(); count++) {
             Node tempNode = nodeList.item(count);
+            LOG.debug("handleNodeList: node type: " + tempNode.getNodeType());
 
             // make sure it's element node.
             if (tempNode.getNodeType() == Node.ELEMENT_NODE) {
@@ -177,7 +178,7 @@ public class ImportParseXML {
                     if (tempNode.getChildNodes().getLength() == 1) {
                         String name = tempNode.getNodeName();
                         String value = tempNode.getTextContent();
-                        if (tempNode.getParentNode().getNodeName().equals(cVariantXMLEntity)) {
+                        if (hasVariants && tempNode.getParentNode().getNodeName().equals(cVariantXMLEntity)) {
                             /* adding to variantInfo object */
                             variantInfo.put(name, value);
                             FieldMap fm = new FieldMap();
@@ -204,7 +205,7 @@ public class ImportParseXML {
                 }
 
                 // this means we are at the end of variant
-                if (tempNode.getNodeName().equals(cVariantXMLEntity)) {
+                if (hasVariants && tempNode.getNodeName().equals(cVariantXMLEntity)) {
 
                     /* add this variant to variantList - DOES this need to be cloned? */
                     List<Map<String, String>> varList = new ArrayList<Map<String, String>>();
@@ -217,26 +218,28 @@ public class ImportParseXML {
                 if (tempNode.getNodeName().equals(cProductXMLEntity)) {
                     // write the object that just closed
                     try {
-                        /* loop for each item in variantList */
-                        for (Map<String, String> variant : variantList) {
 
-                            writer.beginObject();
+                        writer.beginObject();
 
-                            /* write product level fields */
-                            for (Map.Entry<String, String> entry : getOutputObject().entrySet()) {
-                                writer.name(entry.getKey()).value(entry.getValue());
-                            }
-
-                            /* write variant level fields */
-                            for (Map.Entry<String, String> variantEntry : variant.entrySet()) {
-                                writer.name(variantEntry.getKey()).value(variantEntry.getValue());
-                            }
-
-                            writer.endObject();
+                        /* write product level fields */
+                        for (Map.Entry<String, String> entry : getOutputObject().entrySet()) {
+                            writer.name(entry.getKey()).value(entry.getValue());
                         }
 
+                        if (hasVariants) {
+                            /* loop for each item in variantList */
+                            for (Map<String, String> variant : variantList) {
+                                /* write variant level fields */
+                                for (Map.Entry<String, String> variantEntry : variant.entrySet()) {
+                                    writer.name(variantEntry.getKey()).value(variantEntry.getValue());
+                                }
+                            }
+                            variantList.clear();
+                        }
+
+                        writer.endObject();
+
                         // clear outputObject
-                        variantList.clear();
                         clearOutputObject();
                     } catch (IOException ioe) {
                         LOG.error("handleNodeList(endObject): " + ioe);
