@@ -139,8 +139,18 @@ public class OutputConnect {
 
                     switchOnElementType(doc, elem, jsonObj.get(key), key);
 
-                    // add this field (element) tp the product
-                    prod.appendChild(elem);
+                    if (jsonObj.get(key) instanceof JsonPrimitive) {
+                        String value = jsonObj.get(key).getAsJsonPrimitive().getAsString();
+
+                        // if it's a primitive and it has a value, write it
+                        if (value.length() > 0) {
+                            // add this field (element) tp the product
+                            prod.appendChild(elem);
+                        }
+                    } else {
+                        // add this field (element) tp the product
+                        prod.appendChild(elem);
+                    }
                 }
 
                 // handle adding variants
@@ -293,7 +303,6 @@ public class OutputConnect {
 
         // no need to use escapeXml11 because this happens later
         // leaving this in there double escapes it and is not correct
-
         elem.appendChild(doc.createTextNode(jp.getAsString()));
     }
 }
